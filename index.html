@@ -790,7 +790,7 @@ function renderGantt() {
       if(pw>1) s+='<rect x="'+x1+'" y="'+by+'" width="'+pw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.9"><title>'+tip+'</title></rect>';
       s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="none" stroke="'+bc+'" stroke-width="1.5" opacity="0.7"><title>'+tip+'</title></rect>';
       if(bw>32){var mc=Math.floor((bw-10)/6.5);var lbl=ph.naziv_faze.length>mc?ph.naziv_faze.slice(0,mc)+'...':ph.naziv_faze;s+='<text x="'+(x1+6)+'" y="'+(by+BH/2+4)+'" font-size="10" fill="'+bc+'" font-weight="600" style="pointer-events:none">'+lbl+'</text>';}
-      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" onclick="selectProjectFromGantt(''+ph.projekt_st+'')" style="cursor:pointer"><title>'+tip+'</title></rect>';
+      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" data-pid="'+ph.projekt_st+'" class="gantt-click" style="cursor:pointer"><title>'+tip+'</title></rect>';
     });
   });
   s+='<defs><clipPath id="lclip"><rect x="0" y="0" width="'+(LW-4)+'" height="'+TH+'"/></clipPath></defs></svg>';
@@ -806,11 +806,19 @@ function renderGantt() {
     '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#E24B4A;display:inline-block;border-right:2px dashed #E24B4A"></span>danes</span>'+
     '<span style="margin-left:auto">kliknite na projekt za podrobnosti</span></div>';
   var el=document.getElementById('gantt-scroll');
-  if(el){var isDown=false,sX=0,sL=0;
-    el.addEventListener('mousedown',function(e){isDown=true;el.style.cursor='grabbing';sX=e.pageX-el.offsetLeft;sL=el.scrollLeft;});
+  if(el){var isDown=false,sX=0,sL=0,moved=false;
+    el.addEventListener('mousedown',function(e){isDown=true;moved=false;el.style.cursor='grabbing';sX=e.pageX-el.offsetLeft;sL=el.scrollLeft;});
     el.addEventListener('mouseleave',function(){isDown=false;el.style.cursor='grab';});
     el.addEventListener('mouseup',function(){isDown=false;el.style.cursor='grab';});
-    el.addEventListener('mousemove',function(e){if(!isDown)return;e.preventDefault();el.scrollLeft=sL-(e.pageX-el.offsetLeft-sX);});
+    el.addEventListener('mousemove',function(e){if(!isDown)return;moved=true;e.preventDefault();el.scrollLeft=sL-(e.pageX-el.offsetLeft-sX);});
+    el.addEventListener('click',function(e){
+      if(moved)return;
+      var t=e.target;
+      while(t&&t!==el){
+        if(t.dataset&&t.dataset.pid){selectProjectFromGantt(t.dataset.pid);return;}
+        t=t.parentNode;
+      }
+    });
   }
 }
 
