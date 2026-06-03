@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GeoInženiring — Projekti</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --g:#1D9E75;--g-bg:#E4F2EC;--g-tc:#085041;
+  --b-bg:#E6F1FB;--b-tc:#0C447C;
+  --p-bg:#EEEDFE;--p-tc:#3C3489;
+  --a-bg:#FAEEDA;--a-tc:#854F0B;
+  --r-bg:#FCEBEB;--r-tc:#A32D2D;
+  --gray-bg:#F1EFE8;--gray-tc:#5F5E5A;
+  --bg:#F7F6F3;--sur:#fff;--bdr:rgba(0,0,0,.1);
+  --tx:#1a1a1a;--tx2:#6b6b6b;--tx3:#a0a0a0;
+  --rad:10px;--rad-lg:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1a1a;--sur:#242424;--bdr:rgba(255,255,255,.1);
+  --tx:#e8e6e0;--tx2:#a09f9a;--tx3:#5a5958;
+  --g-bg:#085041;--g-tc:#9FE1CB;
+  --b-bg:#042C53;--b-tc:#85B7EB;
+  --p-bg:#26215C;--p-tc:#AFA9EC;
+  --a-bg:#412402;--a-tc:#FAC775;
+  --r-bg:#501313;--r-tc:#F09595;
+  --gray-bg:#2C2C2A;--gray-tc:#B4B2A9;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5;min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:20px 16px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.logo{font-size:15px;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:8px}
+.logo i{font-size:20px;color:var(--g)}
+.sync{font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:5px}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--tx3);transition:background .3s}
+.sdot.ok{background:var(--g)}.sdot.err{background:#E24B4A}.sdot.spin{background:#EF9F27;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tabs{display:flex;gap:2px;background:var(--bdr);border-radius:var(--rad);padding:3px}
+.tab{padding:6px 16px;font-size:13px;border-radius:7px;cursor:pointer;color:var(--tx2);border:none;background:none;transition:all .15s;white-space:nowrap}
+.tab.active{background:var(--sur);color:var(--tx);font-weight:500}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:580px){.metrics{grid-template-columns:1fr 1fr}}
+.metric{background:var(--sur);border-radius:var(--rad);padding:12px 14px;border:.5px solid var(--bdr)}
+.ml{font-size:11px;color:var(--tx2);margin-bottom:4px}
+.mv{font-size:22px;font-weight:600}
+.ms{font-size:11px;color:var(--tx3);margin-top:2px}
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.stitle{font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:7px 14px;font-size:13px;border-radius:var(--rad);cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;font-weight:500;transition:opacity .15s;white-space:nowrap}
+.btn-g{background:var(--g);color:#fff}.btn-g:hover{opacity:.88}
+.btn-s{background:var(--sur);color:var(--tx);border:.5px solid var(--bdr)}.btn-s:hover{background:var(--bg)}
+.btn-d{background:var(--r-bg);color:var(--r-tc);border:.5px solid rgba(163,45,45,.2)}.btn-d:hover{opacity:.8}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search-row input,.search-row select{font-size:13px;padding:7px 10px;border:.5px solid var(--bdr);border-radius:var(--rad);background:var(--sur);color:var(--tx);outline:none}
+.search-row input{flex:1;min-width:160px}
+.search-row input:focus,.search-row select:focus{border-color:var(--g)}
+.pcard{background:var(--sur);border:.5px solid var(--bdr);border-radius:var(--rad-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s;margin-bottom:8px}
+.pcard:hover{border-color:rgba(0,0,0,.2)}.pcard.sel{border:1.5px solid var(--g)}
+.pcard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+.pcard-title{font-size:14px;font-weight:500;color:var(--tx)}
+.pcard-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.badge{display:inline-flex;align-items:center;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+.pmeta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--tx2);margin:6px 0 10px}
+.pmeta i{font-size:14px;vertical-align:-2px;margin-right:2px}
+.phases-bar{display:flex;gap:3px;margin-bottom:8px;min-height:26px}
+.ph{flex:1;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;position:relative;min-width:10px;overflow:visible}
+.ph .phlbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px;pointer-events:none}
+.ph .phtt{position:absolute;bottom:calc(100%+6px);left:50%;transform:translateX(-50%);background:var(--sur);border:.5px solid var(--bdr);border-radius:var(--rad);padding:8px 10px;font-size:11px;color:var(--tx2);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:50;line-height:1.7}
+.ph:hover .phtt{opacity:1}
+.pbar-row{display:flex;align-items:center;gap:8px}
+.pbar{flex:1;height:4px;border-radius:2px;background:var(--bdr)}
+.pfill{height:100%;border-radius:2px;background:var(--g);transition:width .4s}
+.ppct{font-size:12px;font-weight:500;color:var(--tx2);min-width:28px;text-align:right}
+.no-phases{height:26px;background:var(--bg);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3);width:100%}
+.empty{text-align:center;padding:40px 20px;color:var(--tx3)}
+.empty i{font-size:36px;display:block;margin-bottom:10px}
+.detail{background:var(--sur);border:.5px solid var(--bdr);border-radius:var(--rad-lg);padding:18px;margin-top:10px}
+.detail-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;padding-bottom:16px;border-bottom:.5px solid var(--bdr)}
+@media(max-width:500px){.info-grid{grid-template-columns:1fr 1fr}}
+.info-item label{font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px}
+.info-item span{font-size:13px;font-weight:500;color:var(--tx)}
+.faze-title{font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.faza{border:.5px solid var(--bdr);border-radius:var(--rad);overflow:hidden;margin-bottom:8px}
+.faza-head{display:grid;grid-template-columns:10px 1fr auto auto auto;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s}
+.faza-head:hover{background:var(--bg)}
+.faza-name{font-size:13px;font-weight:500;color:var(--tx)}
+.faza-resp{font-size:12px;color:var(--tx2)}
+.faza-dates{font-size:11px;color:var(--tx3)}
+.faza-status{font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500}
+.faza-body{padding:12px 14px;border-top:.5px solid var(--bdr);background:var(--bg);display:none}
+.faza.open .faza-body{display:block}
+.faza-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px;margin-bottom:10px}
+.faza-item label{font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:2px}
+.faza-item span{color:var(--tx);font-weight:500}
+.prog-edit{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.prog-edit input[type=range]{flex:1;accent-color:var(--g);min-width:100px}
+.prog-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-bottom:5px}
+.prog-bar2{height:6px;border-radius:3px;background:var(--bdr)}
+.prog-fill2{height:100%;border-radius:3px;transition:width .4s}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:20px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--sur);border-radius:var(--rad-lg);border:.5px solid var(--bdr);padding:22px;width:100%;max-width:520px;margin:auto}
+.modal-title{font-size:16px;font-weight:600;color:var(--tx);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;font-size:13px;border:.5px solid var(--bdr);border-radius:var(--rad);background:var(--bg);color:var(--tx);outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--g)}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dur-preview{background:var(--g-bg);border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:var(--g-tc);display:none}
+.modal-footer{display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:.5px solid var(--bdr);margin-top:4px}
+.ferr{font-size:12px;color:var(--r-tc);padding:7px 12px;background:var(--r-bg);border-radius:var(--rad);margin-bottom:10px;display:none}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--sur);border:.5px solid var(--bdr);border-radius:var(--rad);padding:10px 16px;font-size:13px;color:var(--tx);z-index:999;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:opacity .3s}
+.toast.show{opacity:1}
+.cfg-banner{background:var(--a-bg);border:.5px solid rgba(186,117,23,.3);border-radius:var(--rad);padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--a-tc);display:flex;align-items:center;gap:10px}
+.cfg-banner i{font-size:18px;flex-shrink:0}
+.cfg-banner a{color:var(--a-tc);font-weight:600}
+.eng-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ecard{background:var(--sur);border:.5px solid var(--bdr);border-radius:var(--rad-lg);padding:12px 14px}
+.ehdr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ava{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0}
+.lb{height:6px;border-radius:3px;background:var(--bdr);margin-bottom:4px}
+.lf{height:100%;border-radius:3px;transition:width .4s}
+.ll{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2)}
+.etags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.etag{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg);color:var(--tx2);border:.5px solid var(--bdr)}
+.gantt-wrap{overflow-x:auto;padding-bottom:8px}
+.gantt-svg{display:block;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="cfg-banner" id="cfg-banner">
+  <i class="ti ti-alert-triangle"></i>
+  <span>Niste povezani z Google Preglednico. <a href="#" onclick="openCfg();return false">Nastavite URL →</a></span>
+</div>
+
+<div class="topbar">
+  <div class="logo"><i class="ti ti-layers-intersect"></i>GeoInženiring — Projekti</div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="sync"><div class="sdot" id="sdot"></div><span id="slbl">Ni povezave</span></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('projects')">Projekti</button>
+      <button class="tab" onclick="switchTab('engineers')">Vodje</button>
+      <button class="tab" onclick="switchTab('gantt')">Gantogram</button>
+    </div>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="ml">Aktivnih projektov</div><div class="mv" id="m-active">—</div><div class="ms">v teku</div></div>
+  <div class="metric"><div class="ml">Zaključenih projektov</div><div class="mv" id="m-done">—</div><div class="ms">letos</div></div>
+  <div class="metric"><div class="ml">Načrtovanih faz</div><div class="mv" id="m-phases">—</div><div class="ms">skupaj</div></div>
+  <div class="metric"><div class="ml">Zamud</div><div class="mv" id="m-late" style="color:#E24B4A">—</div><div class="ms">faz po roku</div></div>
+</div>
+
+<div id="tab-projects">
+  <div class="shdr">
+    <span class="stitle">Projekti</span>
+    <button class="btn btn-s" onclick="loadAll()"><i class="ti ti-refresh"></i>Osveži</button>
+  </div>
+  <div class="search-row">
+    <input id="q" type="search" placeholder="Išči projekt, naročnika…" oninput="renderProjects()">
+    <select id="f-skupina" onchange="renderProjects()"><option value="">Vse skupiny</option></select>
+    <div id="f-status-wrap" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"></div>
+  </div>
+  <div id="proj-list"></div>
+</div>
+
+<div id="tab-engineers" style="display:none">
+  <div class="stitle" style="margin-bottom:12px">Obremenjenost vodij</div>
+  <div class="eng-grid" id="eng-grid"></div>
+</div>
+
+<div id="tab-gantt" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span class="stitle">Terminski plan faz</span>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span style="font-size:11px;color:var(--tx3)">Obseg:</span>
+      <button class="btn btn-s" id="gscale-month" onclick="setGanttScale('month')" style="padding:4px 10px;font-size:12px">Mesec</button>
+      <button class="btn btn-s" id="gscale-quarter" onclick="setGanttScale('quarter')" style="padding:4px 10px;font-size:12px">Kvartal</button>
+      <button class="btn btn-s" id="gscale-year" onclick="setGanttScale('year')" style="padding:4px 10px;font-size:12px">Leto</button>
+    </div>
+  </div>
+  <div class="gantt-wrap" id="gantt-container"></div>
+</div>
+</div>
+
+<!-- Config modal -->
+<div class="modal-bg" id="cfg-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-settings"></i>Nastavitev povezave</div>
+    <div class="fg">
+      <label>URL Google Apps Script (Web App)</label>
+      <input id="cfg-url" type="text" placeholder="https://script.google.com/macros/s/…/exec">
+      <div style="font-size:11px;color:var(--tx3);margin-top:5px">Pridobite URL po namestitvi skripta kot Web App.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-s" onclick="closeCfg()">Prekliči</button>
+      <button class="btn btn-g" onclick="saveCfg()"><i class="ti ti-check"></i>Shrani in poveži</button>
+    </div>
+  </div>
+</div>
+
+<!-- Phase modal -->
+<div class="modal-bg" id="phase-modal">
+  <div class="modal" id="phase-modal-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Hidden iframe for CORS-free POST via form submission -->
+<iframe id="post-frame" name="post-frame" style="display:none"></iframe>
+
+<script>
+// ─── JSONP helper — works from file:// ───────────────────────────────────────
+let _cbCounter = 0;
+function jsonp(url, params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '__geo_cb_' + (_cbCounter++);
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      reject(new Error('Timeout'));
+    }, 15000);
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      const s = document.getElementById('jsonp-script-' + cbName);
+      if (s) s.remove();
+      resolve(data);
+    };
+    const allParams = Object.assign({}, params, { callback: cbName });
+    const qs = Object.entries(allParams).map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+    const s = document.createElement('script');
+    s.id = 'jsonp-script-' + cbName;
+    s.src = url + '?' + qs;
+    s.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('Script load error')); };
+    document.head.appendChild(s);
+  });
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+let SCRIPT_URL = localStorage.getItem('geo_script_url') || '';
+
+const COLORS = [
+  {c:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'},
+  {c:'#1D9E75',bg:'#E4F2EC',tc:'#085041'},
+  {c:'#7F77DD',bg:'#EEEDFE',tc:'#3C3489'},
+  {c:'#D85A30',bg:'#FAECE7',tc:'#712B13'},
+  {c:'#D4537E',bg:'#FBEAF0',tc:'#72243E'},
+  {c:'#639922',bg:'#EAF3DE',tc:'#27500A'},
+];
+const AVA = ['#9FE1CB','#B5D4F4','#F5C4B3','#CECBF6','#C0DD97','#FAC775','#F4C0D1'];
+
+let allProjects = [];
+let allPhases   = [];
+let allPersons  = [];
+let selectedSt  = null;
+let selectedStatuses = new Set();
+let ganttScale = 'year';
+
+function ini(n){return (n||'').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}
+function fmt(s){if(!s)return'—';const d=new Date(s);return isNaN(d)?s:d.toLocaleDateString('sl-SI',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function days(a,b){return Math.max(0,Math.round((new Date(b)-new Date(a))/86400000))}
+function phColor(i){return COLORS[i % COLORS.length]}
+function phStatus(ph){
+  const now=new Date(),s=new Date(ph.datum_zacetka),e=new Date(ph.datum_konca);
+  if((ph.napredek||0)>=100)return'done';
+  if(ph.datum_konca&&now>e)return'late';
+  if(ph.datum_zacetka&&now>=s)return'active';
+  return'future';
+}
+const ST_MAP={
+  done: {bg:'#E4F2EC',tc:'#0F6E56',lbl:'Končano'},
+  late: {bg:'#FCEBEB',tc:'#A32D2D',lbl:'Zamuda'},
+  active:{bg:'#FAEEDA',tc:'#854F0B',lbl:'V teku'},
+  future:{bg:'#F1EFE8',tc:'#5F5E5A',lbl:'Čaka'},
+};
+
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+function setSyncStatus(s){
+  const dot=document.getElementById('sdot'),lbl=document.getElementById('slbl');
+  dot.className='sdot '+s;
+  lbl.textContent=s==='ok'?'Sinhronizirano':s==='spin'?'Nalaganje…':s==='err'?'Napaka':'Ni povezave';
+}
+function toast(msg,ok=true){
+  const t=document.getElementById('toast');
+  t.innerHTML=`<i class="ti ti-${ok?'check':'alert-triangle'}" style="color:${ok?'var(--g)':'#EF9F27'}"></i>${msg}`;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+async function api(action, params={}) {
+  if (!SCRIPT_URL) { setSyncStatus(''); return null; }
+  setSyncStatus('spin');
+  try {
+    const data = await jsonp(SCRIPT_URL, Object.assign({ action }, params));
+    if (data.error) throw new Error(data.error);
+    setSyncStatus('ok');
+    return data;
+  } catch(e) {
+    setSyncStatus('err');
+    toast('Napaka: ' + e.message, false);
+    return null;
+  }
+}
+
+// For write operations use fetch with no-cors won't work,
+// so we use a hidden form POST to iframe (fire-and-forget), then reload data
+function apiPost(action, dataObj) {
+  return new Promise((resolve) => {
+    if (!SCRIPT_URL) { resolve(null); return; }
+    setSyncStatus('spin');
+    const cbName = '__geo_post_cb_' + (_cbCounter++);
+    const allParams = Object.assign({ action }, dataObj, { callback: cbName });
+    window[cbName] = function(data) {
+      delete window[cbName];
+      setSyncStatus('ok');
+      resolve(data);
+    };
+    // Use JSONP for writes too (GET with all params encoded)
+    const qs = Object.entries(allParams).map(([k,v]) =>
+      k + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v)
+    ).join('&');
+    const s = document.createElement('script');
+    s.src = SCRIPT_URL + '?' + qs;
+    s.onerror = () => { delete window[cbName]; setSyncStatus('ok'); resolve(null); };
+    setTimeout(() => { if(window[cbName]){ delete window[cbName]; setSyncStatus('ok'); resolve(null); } }, 12000);
+    document.head.appendChild(s);
+  });
+}
+
+// ─── LOAD ─────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  if (!SCRIPT_URL) { updateMetrics(); renderProjects(); return; }
+  const [rp, rf, rv] = await Promise.all([
+    api('getProjects'),
+    api('getPhases'),
+    api('getPersons'),
+  ]);
+  if (rp?.projects) allProjects = rp.projects;
+  if (rf?.phases)   allPhases   = rf.phases;
+  if (rv?.persons)  allPersons  = rv.persons;
+  populateFilters();
+  updateMetrics();
+  renderProjects();
+}
+
+function populateFilters() {
+  const sk = [...new Set(allProjects.map(p=>p.skupina).filter(Boolean))].sort();
+  const selSk = document.getElementById('f-skupina');
+  const curSk = selSk.value;
+  selSk.innerHTML = '<option value="">Vse skupiny</option>' +
+    sk.map(s=>`<option value="${s}"${s===curSk?' selected':''}>${s}</option>`).join('');
+
+  const statuses = [...new Set(allProjects.map(p=>p.zakljucen).filter(Boolean))].sort();
+  const wrap = document.getElementById('f-status-wrap');
+  if (wrap) {
+    wrap.innerHTML = statuses.map(s => {
+      const active = selectedStatuses.has(s);
+      return `<button onclick="toggleStatus('${s}')" id="stbtn-${s.replace(/[^a-zA-Z0-9]/g,'_')}"
+        style="padding:4px 10px;font-size:12px;border-radius:20px;cursor:pointer;border:.5px solid ${active?'#1D9E75':'var(--bdr)'};background:${active?'#E4F2EC':'var(--sur)'};color:${active?'#085041':'var(--tx2)'};font-weight:${active?'500':'400'}"
+        >${s}</button>`;
+    }).join('') + (statuses.length ? `<button onclick="clearStatuses()" style="padding:4px 8px;font-size:11px;border-radius:20px;cursor:pointer;border:.5px solid var(--bdr);background:var(--sur);color:var(--tx3)">× vse</button>` : '');
+  }
+}
+
+function updateMetrics() {
+  const active = allProjects.filter(p=>!p.zakljucen||p.zakljucen.toLowerCase().includes('aktiv')||p.zakljucen==='').length;
+  const done   = allProjects.filter(p=>p.zakljucen&&p.zakljucen.toLowerCase().includes('zakl')).length;
+  const late   = allPhases.filter(ph=>phStatus(ph)==='late').length;
+  document.getElementById('m-active').textContent = active;
+  document.getElementById('m-done').textContent   = done;
+  document.getElementById('m-phases').textContent = allPhases.length;
+  document.getElementById('m-late').textContent   = late;
+}
+
+// ─── PROJECTS LIST ────────────────────────────────────────────────────────────
+function toggleStatus(s) {
+  if (selectedStatuses.has(s)) selectedStatuses.delete(s);
+  else selectedStatuses.add(s);
+  populateFilters();
+  renderProjects();
+}
+function clearStatuses() {
+  selectedStatuses.clear();
+  populateFilters();
+  renderProjects();
+}
+
+function filteredProjects() {
+  const q  = (document.getElementById('q')?.value||'').toLowerCase();
+  const sk = document.getElementById('f-skupina')?.value||'';
+  return allProjects.filter(p => {
+    if (q && ![p.st,p.projekt,p.narocnik].join(' ').toLowerCase().includes(q)) return false;
+    if (sk && p.skupina !== sk) return false;
+    if (selectedStatuses.size > 0 && !selectedStatuses.has(p.zakljucen)) return false;
+    return true;
+  });
+}
+
+function renderProjects() {
+  updateMetrics();
+  const list = document.getElementById('proj-list');
+  const ps = filteredProjects();
+  if (!ps.length) { list.innerHTML='<div class="empty"><i class="ti ti-folder-off"></i>Ni projektov.</div>'; return; }
+  list.innerHTML = ps.map(p => {
+    const phs = allPhases.filter(ph => String(ph.projekt_st) === String(p.st));
+    const prog = phs.length ? Math.round(phs.reduce((a,ph)=>a+(ph.napredek||0),0)/phs.length) : 0;
+    const zakl = p.zakljucen||'';
+    const isZakl = zakl && !['aktiven','aktivno','v teku','','aktivni'].includes(zakl.toLowerCase());
+    const stB = isZakl ? {bg:'#F1EFE8',tc:'#5F5E5A',lbl:zakl} : {bg:'#E4F2EC',tc:'#0F6E56',lbl:zakl||'Aktiven'};
+    const totalDur = phs.reduce((a,ph)=>a+days(ph.datum_zacetka,ph.datum_konca),0)||1;
+    const segs = phs.length
+      ? phs.map((ph,i) => {
+          const col = phColor(i);
+          const dur = days(ph.datum_zacetka, ph.datum_konca);
+          const pct = Math.round(dur/totalDur*100);
+          const stm = ST_MAP[phStatus(ph)];
+          return `<div class="ph" style="flex:${Math.max(pct,8)};background:${col.bg}">
+            <div class="phlbl" style="color:${col.tc}">${ph.naziv_faze}</div>
+            <div class="phtt"><strong style="color:${col.tc}">${ph.naziv_faze}</strong><br>Odgovorna oseba: ${ph.odgovorna_oseba||'—'}<br>Rok: ${fmt(ph.datum_zacetka)} – ${fmt(ph.datum_konca)}<br>Napredek: ${ph.napredek||0}%<br><span style="background:${stm.bg};color:${stm.tc};padding:1px 6px;border-radius:10px">${stm.lbl}</span></div>
+          </div>`;
+        }).join('')
+      : `<div class="no-phases"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Brez faz — kliknite za dodajanje</div>`;
+
+    const isSelected = selectedSt === p.st;
+    const detailHtml = isSelected ? buildDetailHtml(p, phs) : '';
+
+    return `<div class="pcard${isSelected?' sel':''}" onclick="selectProject('${p.st}')">
+      <div class="pcard-head">
+        <div><div class="pcard-title">${p.st} · ${p.projekt}</div><div class="pcard-sub">${p.narocnik||'—'}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge" style="background:${stB.bg};color:${stB.tc}">${stB.lbl}</span>
+          <i class="ti ti-chevron-${isSelected?'up':'down'}" style="font-size:16px;color:var(--tx3)"></i>
+        </div>
+      </div>
+      <div class="pmeta">
+        <span><i class="ti ti-user"></i>${p.vodjaProjekta||'—'}</span>
+        ${p.vodjaTerma?`<span><i class="ti ti-map-pin"></i>Teren: ${p.vodjaTerma}</span>`:''}
+        ${p.rok?`<span><i class="ti ti-calendar-due"></i>Rok: ${fmt(p.rok)}</span>`:''}
+        ${p.skupina?`<span><i class="ti ti-tag"></i>${p.skupina}</span>`:''}
+      </div>
+      <div class="phases-bar">${segs}</div>
+      ${phs.length?`<div class="pbar-row"><div class="pbar"><div class="pfill" style="width:${prog}%"></div></div><span class="ppct">${prog}%</span></div>`:''}
+    </div>
+    ${detailHtml}`;
+  }).join('');
+}
+
+function selectProject(st) {
+  selectedSt = (selectedSt === st) ? null : st;
+  renderProjects();
+  if (selectedSt) {
+    setTimeout(() => {
+      const el = document.getElementById('inline-detail-' + st);
+      if (el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }, 30);
+  }
+}
+
+function renderDetail(st) {
+  renderProjects();
+}
+
+function buildDetailHtml(p, phs) {
+  const st = p.st;
+  const fazeHtml = phs.map((ph,i) => {
+    const col = phColor(i);
+    const stm = ST_MAP[phStatus(ph)];
+    return `<div class="faza" id="fz-${ph._rowNum}">
+      <div class="faza-head" onclick="event.stopPropagation();toggleFaza('fz-${ph._rowNum}')">
+        <div style="width:10px;height:10px;border-radius:50%;background:${col.c};flex-shrink:0"></div>
+        <div class="faza-name">${ph.naziv_faze}</div>
+        <div class="faza-resp"><i class="ti ti-user" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>${ph.odgovorna_oseba||'—'}</div>
+        <div class="faza-dates">${fmt(ph.datum_zacetka)} – ${fmt(ph.datum_konca)}</div>
+        <span class="faza-status" style="background:${stm.bg};color:${stm.tc}">${stm.lbl} · ${ph.napredek||0}%</span>
+      </div>
+      <div class="faza-body">
+        <div class="faza-grid">
+          <div class="faza-item"><label>Odgovorna oseba</label><span>${ph.odgovorna_oseba||'—'}</span></div>
+          <div class="faza-item"><label>Začetek</label><span>${fmt(ph.datum_zacetka)}</span></div>
+          <div class="faza-item"><label>Konec</label><span>${fmt(ph.datum_konca)}</span></div>
+          <div class="faza-item"><label>Trajanje</label><span>${days(ph.datum_zacetka,ph.datum_konca)} dni</span></div>
+          <div class="faza-item"><label>Opombe</label><span>${ph.opombe||'—'}</span></div>
+        </div>
+        <div class="prog-lbl"><span>Napredek</span><span id="pv-${ph._rowNum}">${ph.napredek||0}%</span></div>
+        <div class="prog-bar2"><div class="prog-fill2" id="pf-${ph._rowNum}" style="width:${ph.napredek||0}%;background:${col.c}"></div></div>
+        <div class="prog-edit">
+          <input type="range" min="0" max="${days(ph.datum_zacetka,ph.datum_konca)||100}" step="1" value="${Math.round((ph.napredek||0)/100*(days(ph.datum_zacetka,ph.datum_konca)||100))}"
+            oninput="updateSlider(this,${ph._rowNum},${days(ph.datum_zacetka,ph.datum_konca)||100})">
+          <span style="font-size:11px;color:var(--tx3);min-width:55px;text-align:right" id="pv2-${ph._rowNum}">${Math.round((ph.napredek||0)/100*(days(ph.datum_zacetka,ph.datum_konca)||100))} / ${days(ph.datum_zacetka,ph.datum_konca)||100} dni</span>
+          <button class="btn btn-g" onclick="event.stopPropagation();saveProgress(${ph._rowNum},this)" style="padding:5px 10px;font-size:12px">Shrani</button>
+          <button class="btn btn-s" onclick="event.stopPropagation();openPhaseModal('${st}',${ph._rowNum})" style="padding:5px 10px;font-size:12px"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-d" onclick="event.stopPropagation();deletePhase(${ph._rowNum},'${st}')" style="padding:5px 8px;font-size:12px"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="detail" id="inline-detail-${st}" onclick="event.stopPropagation()">
+    <div class="info-grid" style="margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--bdr)">
+      <div class="info-item"><label>Vodja projekta</label><span>${p.vodjaProjekta||'—'}</span></div>
+      <div class="info-item"><label>Vodja terena</label><span>${p.vodjaTerma||'—'}</span></div>
+      <div class="info-item"><label>Storitev</label><span>${p.storitev||'—'}</span></div>
+      <div class="info-item"><label>Zacetek projekta</label><span>${fmt(p.datumZacetka)||'—'}</span></div>
+      <div class="info-item"><label>Rok pogodbe</label><span>${fmt(p.rok)}</span></div>
+      <div class="info-item"><label>Vrednost</label><span>${p.vrednost?p.vrednost+'€':'—'}</span></div>
+      <div class="info-item"><label>Narocnik</label><span>${p.narocnik||'—'}</span></div>
+    </div>
+    <div class="faze-title">
+      <span>Faze projekta (${phs.length})</span>
+      <button class="btn btn-g" onclick="event.stopPropagation();openPhaseModal('${st}')" style="padding:5px 12px;font-size:12px">
+        <i class="ti ti-plus"></i>Dodaj fazo
+      </button>
+    </div>
+    ${fazeHtml || `<div class="empty" style="padding:20px 0"><i class="ti ti-stack-2"></i>Ni faz. Kliknite "Dodaj fazo".</div>`}
+  </div>`;
+}
+
+function toggleFaza(id){document.getElementById(id)?.classList.toggle('open')}
+
+function updateSlider(input, rowNum, totalDays) {
+  const dayVal = parseInt(input.value);
+  const pct = totalDays > 0 ? Math.round(dayVal / totalDays * 100) : 0;
+  const pvEl = document.getElementById('pv-'+rowNum);
+  const pv2El = document.getElementById('pv2-'+rowNum);
+  const pfEl = document.getElementById('pf-'+rowNum);
+  if (pvEl) pvEl.textContent = pct + '%';
+  if (pv2El) pv2El.textContent = dayVal + ' / ' + totalDays + ' dni';
+  if (pfEl) pfEl.style.width = pct + '%';
+}
+
+async function saveProgress(rowNum, btn) {
+  const slider = btn.closest('.prog-edit').querySelector('input[type=range]');
+  const totalDays = parseInt(slider.max) || 100;
+  const dayVal = parseInt(slider.value);
+  const pct = totalDays > 0 ? Math.round(dayVal / totalDays * 100) : 0;
+  const ph = allPhases.find(p=>p._rowNum===rowNum);
+  if (ph) ph.napredek = pct;
+  document.getElementById('pf-'+rowNum).style.width = pct+'%';
+  btn.disabled = true;
+  await api('updateProgress', { id: rowNum, napredek: pct });
+  btn.disabled = false;
+  toast('Napredek shranjen');
+  updateMetrics(); renderProjects();
+}
+
+async function deletePhase(rowNum, st) {
+  if (!window.confirm('Izbrisati to fazo?')) return;
+  allPhases = allPhases.filter(p=>p._rowNum!==rowNum);
+  renderProjects(); updateMetrics();
+  await api('deletePhase', { id: rowNum });
+  toast('Faza izbrisana');
+  const rf = await api('getPhases');
+  if (rf?.phases) allPhases = rf.phases;
+  renderProjects(); updateMetrics();
+}
+
+// ─── PHASE MODAL ──────────────────────────────────────────────────────────────
+function openPhaseModal(projektSt, editRowNum) {
+  const ph = editRowNum ? allPhases.find(p=>p._rowNum===editRowNum) : null;
+  // Use dedicated persons list; fall back to collecting from projects if empty
+  const basePersons = allPersons.length
+    ? allPersons
+    : [...new Set([
+        ...allProjects.map(p=>p.vodjaProjekta),
+        ...allProjects.map(p=>p.vodjaTerma),
+      ].filter(Boolean))].sort();
+  const personOpts = basePersons.map(p=>`<option value="${p}"${ph?.odgovorna_oseba===p?' selected':''}>${p}</option>`).join('');
+
+  document.getElementById('phase-modal-content').innerHTML = `
+    <div class="modal-title"><i class="ti ti-${editRowNum?'edit':'stack-push'}"></i>${editRowNum?'Uredi fazo':'Dodaj fazo'}</div>
+    <div class="fg">
+      <label>Naziv faze</label>
+      <input id="pf-name" type="text" value="${ph?.naziv_faze||''}" placeholder="npr. Priprava, Terensko delo, Elaborat…">
+    </div>
+    <div class="fg">
+      <label>Odgovorna oseba</label>
+      <select id="pf-resp">
+        <option value="">— izberite —</option>
+        ${personOpts}
+        <option value="__new__">+ Vnesite ročno…</option>
+      </select>
+      <input id="pf-resp-manual" type="text" placeholder="Ime in priimek"
+        style="display:none;margin-top:6px" value="${ph?.odgovorna_oseba||''}">
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Datum začetka</label><input id="pf-start" type="date" value="${ph?.datum_zacetka||''}"></div>
+      <div class="fg"><label>Datum konca</label><input id="pf-end" type="date" value="${ph?.datum_konca||''}"></div>
+    </div>
+    <div class="dur-preview" id="dur-preview">Trajanje: <strong id="dur-days">—</strong></div>
+    ${editRowNum?`
+    <div class="fg">
+      <label>Napredek: <span id="pf-prog-val">${ph?.napredek||0}%</span></label>
+      <input type="range" min="0" max="100" step="5" value="${ph?.napredek||0}"
+        oninput="document.getElementById('pf-prog-val').textContent=this.value+'%'" id="pf-prog">
+    </div>`:''}
+    <div class="fg"><label>Opombe</label><textarea id="pf-notes" rows="2" placeholder="Opombe…">${ph?.opombe||''}</textarea></div>
+    <div class="ferr" id="pf-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-s" onclick="closePhaseModal()">Prekliči</button>
+      <button class="btn btn-g" id="pf-save-btn" onclick="savePhase('${projektSt}',${editRowNum||'null'})">
+        <i class="ti ti-check"></i>${editRowNum?'Shrani':'Dodaj'}
+      </button>
+    </div>`;
+
+  document.getElementById('pf-resp').addEventListener('change', function(){
+    document.getElementById('pf-resp-manual').style.display = this.value==='__new__'?'block':'none';
+  });
+  function updDur(){
+    const s=document.getElementById('pf-start')?.value,e=document.getElementById('pf-end')?.value;
+    const prev=document.getElementById('dur-preview');
+    if(s&&e&&prev){const d=days(s,e);prev.style.display='block';document.getElementById('dur-days').textContent=d+' dni';}
+  }
+  document.getElementById('pf-start').addEventListener('input',updDur);
+  document.getElementById('pf-end').addEventListener('input',updDur);
+
+  document.getElementById('phase-modal').classList.add('open');
+  // Focus first input
+  setTimeout(()=>document.getElementById('pf-name')?.focus(), 50);
+}
+
+function closePhaseModal(){document.getElementById('phase-modal').classList.remove('open')}
+
+async function savePhase(projektSt, editRowNum) {
+  const name  = document.getElementById('pf-name').value.trim();
+  const respSel = document.getElementById('pf-resp').value;
+  const resp  = respSel==='__new__' ? document.getElementById('pf-resp-manual').value.trim() : respSel;
+  const start = document.getElementById('pf-start').value;
+  const end   = document.getElementById('pf-end').value;
+  const notes = document.getElementById('pf-notes')?.value||'';
+  const prog  = editRowNum ? parseInt(document.getElementById('pf-prog')?.value||0) : 0;
+  const errEl = document.getElementById('pf-err');
+  if (!name) { errEl.style.display='block'; errEl.textContent='Vnesite naziv faze'; return; }
+  if (!resp) { errEl.style.display='block'; errEl.textContent='Izberite odgovorno osebo'; return; }
+
+  const btn = document.getElementById('pf-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i>Shranjujem…';
+
+  const existingPh = editRowNum ? allPhases.find(p=>p._rowNum===editRowNum) : null;
+  const finalStart = start || (existingPh ? existingPh.datum_zacetka : '');
+  const finalEnd   = end   || (existingPh ? existingPh.datum_konca   : '');
+  const phase = {
+    projekt_st: projektSt,
+    naziv_faze: name,
+    odgovorna_oseba: resp,
+    datum_zacetka: finalStart,
+    datum_konca: finalEnd,
+    napredek: prog,
+    opombe: notes,
+    _rowNum: editRowNum || null,
+  };
+
+  // Optimistic update
+  if (editRowNum) {
+    const idx = allPhases.findIndex(p=>p._rowNum===editRowNum);
+    if (idx>-1) allPhases[idx] = Object.assign(allPhases[idx], phase);
+  } else {
+    allPhases.push(Object.assign({_rowNum: Date.now()}, phase));
+  }
+  closePhaseModal();
+  renderProjects(); updateMetrics();
+  toast(editRowNum?'Faza posodobljena':'Faza dodana');
+
+  await apiPost('savePhase', { phase: JSON.stringify(phase) });
+
+  // Reload to get real row numbers
+  const rf = await api('getPhases');
+  if (rf?.phases) allPhases = rf.phases;
+  renderProjects(); updateMetrics();
+}
+
+// ─── ENGINEERS ───────────────────────────────────────────────────────────────
+function renderEngineers() {
+  const persons = allPersons.length
+    ? allPersons
+    : [...new Set([
+        ...allProjects.map(p=>p.vodjaProjekta),
+        ...allProjects.map(p=>p.vodjaTerma),
+        ...allPhases.map(p=>p.odgovorna_oseba),
+      ].filter(Boolean))].sort();
+  document.getElementById('eng-grid').innerHTML = persons.map((name,i) => {
+    const activeP = allPhases.filter(ph=>ph.odgovorna_oseba===name&&phStatus(ph)==='active');
+    const projIds = [...new Set(allPhases.filter(ph=>ph.odgovorna_oseba===name).map(ph=>ph.projekt_st))];
+    const load = Math.min(activeP.length*30, 100);
+    const lc = load>=80?'#E24B4A':load>=50?'#EF9F27':'#1D9E75';
+    return `<div class="ecard">
+      <div class="ehdr">
+        <div class="ava" style="width:34px;height:34px;font-size:12px;background:${AVA[i%AVA.length]};color:#2C2C2A">${ini(name)}</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--tx)">${name}</div><div style="font-size:11px;color:var(--tx2)">${activeP.length} aktivnih faz</div></div>
+      </div>
+      <div class="lb"><div class="lf" style="width:${load}%;background:${lc}"></div></div>
+      <div class="ll"><span>Obremenjenost</span><span style="font-weight:500;color:${lc}">${load}%</span></div>
+      <div class="etags">${projIds.map(id=>`<span class="etag">${id}</span>`).join('')||'<span class="etag">ni projektov</span>'}</div>
+    </div>`;
+  }).join('') || '<div class="empty"><i class="ti ti-users-group"></i>Ni podatkov.</div>';
+}
+
+// ─── GANTT ────────────────────────────────────────────────────────────────────
+function setGanttScale(scale) {
+  ganttScale = scale;
+  ['month','quarter','year'].forEach(function(s) {
+    var btn = document.getElementById('gscale-'+s);
+    if (!btn) return;
+    if (s === scale) { btn.style.background='var(--g-bg)'; btn.style.color='var(--g-tc)'; btn.style.borderColor='var(--g)'; }
+    else { btn.style.background='var(--sur)'; btn.style.color='var(--tx2)'; btn.style.borderColor='var(--bdr)'; }
+  });
+  renderGantt();
+}
+
+function renderGantt() {
+  var dated = allPhases.filter(function(ph){return ph.datum_zacetka&&ph.datum_konca&&ph.odgovorna_oseba;});
+  if (!dated.length) { document.getElementById('gantt-container').innerHTML='<div class="empty"><i class="ti ti-chart-gantt"></i>Ni faz z datumi.</div>'; return; }
+  var personOrder = allPersons.length ? allPersons : Array.from(new Set(dated.map(function(ph){return ph.odgovorna_oseba;}).filter(Boolean)));
+  var personsInUse = personOrder.filter(function(p){return dated.some(function(ph){return ph.odgovorna_oseba===p;});});
+  var allStarts = dated.map(function(ph){return new Date(ph.datum_zacetka);});
+  var allEnds   = dated.map(function(ph){return new Date(ph.datum_konca);});
+  var dataMinD  = new Date(Math.min.apply(null,allStarts));
+  var dataMaxD  = new Date(Math.max.apply(null,allEnds));
+  var today = new Date();
+  var minD, maxD;
+  if (ganttScale === 'month') {
+    minD = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    maxD = new Date(today.getFullYear(), today.getMonth()+2, 0);
+  } else if (ganttScale === 'quarter') {
+    var qm = Math.floor(today.getMonth()/3)*3;
+    minD = new Date(today.getFullYear(), qm-1, 1);
+    maxD = new Date(today.getFullYear(), qm+4, 0);
+  } else {
+    minD = new Date(today.getFullYear()-1, 0, 1);
+    maxD = new Date(today.getFullYear()+1, 11, 31);
+  }
+  if (dataMinD < minD) minD = new Date(dataMinD.getFullYear(), dataMinD.getMonth(), 1);
+  if (dataMaxD > maxD) maxD = dataMaxD;
+  var totalMs = maxD - minD || 1;
+  var ticks = []; var cur2 = new Date(minD);
+  if (ganttScale === 'month') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+7);} }
+  else if (ganttScale === 'quarter') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+14);} }
+  else { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setMonth(cur2.getMonth()+1);} }
+  function xPct(ds){return Math.max(0,Math.min((new Date(ds)-minD)/totalMs,1));}
+  function tickLabel(d){
+    if(ganttScale==='month'||ganttScale==='quarter') return d.toLocaleDateString('sl-SI',{day:'numeric',month:'short'});
+    return d.toLocaleDateString('sl-SI',{month:'short',year:'2-digit'});
+  }
+  var isDark = window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var colBdr=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+  var colToday='#E24B4A', colTx=isDark?'#a09f9a':'#6b6b6b', colTx3=isDark?'#5a5958':'#a0a0a0';
+  var colSur=isDark?'#242424':'#ffffff', colAlt=isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.02)';
+  var PC=['#378ADD','#1D9E75','#7F77DD','#D85A30','#D4537E','#639922','#BA7517','#185FA5'];
+  var LW=110, RH=38, HH=36, BH=22, BP=(RH-BH)/2;
+  var MCW=ganttScale==='month'?90:ganttScale==='quarter'?60:52;
+  var CW=Math.max(600,ticks.length*MCW), TW=LW+CW, TH=HH+personsInUse.length*RH+4;
+  var s='<svg class="gantt-svg" viewBox="0 0 '+TW+' '+TH+'" width="'+TW+'" height="'+TH+'" xmlns="http://www.w3.org/2000/svg">';
+  s+='<rect width="'+TW+'" height="'+TH+'" fill="'+colSur+'" rx="10"/>';
+  personsInUse.forEach(function(p,i){if(i%2===1)s+='<rect x="0" y="'+(HH+i*RH)+'" width="'+TW+'" height="'+RH+'" fill="'+colAlt+'"/>';});
+  ticks.forEach(function(t){
+    var x=LW+xPct(t.toISOString().slice(0,10))*CW;
+    var isMajor=ganttScale==='year'?t.getMonth()===0:(ganttScale==='quarter'?t.getDate()<=7:false);
+    s+='<line x1="'+x+'" y1="'+HH+'" x2="'+x+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="'+(isMajor?1.5:0.5)+'" '+(isMajor?'':'stroke-dasharray="2,2"')+'"/>';
+    s+='<text x="'+(x+3)+'" y="'+(HH-12)+'" font-size="10" fill="'+(isMajor?colTx:colTx3)+'" font-weight="'+(isMajor?600:400)+'">'+tickLabel(t)+'</text>';
+  });
+  var todayX=LW+xPct(today.toISOString().slice(0,10))*CW;
+  if(todayX>LW&&todayX<TW){
+    s+='<line x1="'+todayX+'" y1="0" x2="'+todayX+'" y2="'+TH+'" stroke="'+colToday+'" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>';
+    s+='<rect x="'+(todayX-14)+'" y="2" width="28" height="14" rx="3" fill="'+colToday+'" opacity="0.9"/>';
+    s+='<text x="'+todayX+'" y="12" font-size="9" fill="white" font-weight="600" text-anchor="middle">danes</text>';
+  }
+  s+='<line x1="0" y1="'+HH+'" x2="'+TW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+  s+='<rect x="0" y="0" width="'+LW+'" height="'+TH+'" fill="'+colSur+'"/>';
+  s+='<line x1="'+LW+'" y1="0" x2="'+LW+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+  personsInUse.forEach(function(person,ri){
+    var y=HH+ri*RH;
+    s+='<line x1="0" y1="'+(y+RH)+'" x2="'+TW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
+    s+='<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'" clip-path="url(#lclip)">'+person+'</text>';
+    var phases=dated.filter(function(ph){return ph.odgovorna_oseba===person;});
+    phases.forEach(function(ph,pi){
+      var bc=PC[pi%PC.length];
+      var x1=LW+xPct(ph.datum_zacetka)*CW, x2=LW+xPct(ph.datum_konca)*CW;
+      var bw=Math.max(x2-x1,4), by=y+BP;
+      var proj=allProjects.find(function(p){return String(p.st)===String(ph.projekt_st);});
+      var pname=proj?proj.st+' - '+proj.projekt:ph.projekt_st;
+      var tip=pname+' / '+ph.naziv_faze+'&#10;'+fmt(ph.datum_zacetka)+' - '+fmt(ph.datum_konca)+'&#10;Napredek: '+(ph.napredek||0)+'%';
+      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.3"><title>'+tip+'</title></rect>';
+      var pw=bw*(ph.napredek||0)/100;
+      if(pw>1) s+='<rect x="'+x1+'" y="'+by+'" width="'+pw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.9"><title>'+tip+'</title></rect>';
+      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="none" stroke="'+bc+'" stroke-width="1.5" opacity="0.7"><title>'+tip+'</title></rect>';
+      if(bw>32){var mc=Math.floor((bw-10)/6.5);var lbl=ph.naziv_faze.length>mc?ph.naziv_faze.slice(0,mc)+'...':ph.naziv_faze;s+='<text x="'+(x1+6)+'" y="'+(by+BH/2+4)+'" font-size="10" fill="'+bc+'" font-weight="600" style="pointer-events:none">'+lbl+'</text>';}
+      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" onclick="selectProjectFromGantt(''+ph.projekt_st+'')" style="cursor:pointer"><title>'+tip+'</title></rect>';
+    });
+  });
+  s+='<defs><clipPath id="lclip"><rect x="0" y="0" width="'+(LW-4)+'" height="'+TH+'"/></clipPath></defs></svg>';
+  var leg=Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></span>'+n+'</span>';
+  }).join('');
+  document.getElementById('gantt-container').innerHTML=
+    '<div style="overflow-x:auto;padding-bottom:4px;cursor:grab" id="gantt-scroll">'+s+'</div>'+
+    '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:'+colTx3+'">'+
+    '<span>Faze:</span>'+leg+
+    '<span style="margin-left:8px;display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#1D9E75;border-radius:2px;opacity:.9;display:inline-block"></span>opravljeno</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#1D9E75;border-radius:2px;opacity:.3;display:inline-block"></span>preostalo</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#E24B4A;display:inline-block;border-right:2px dashed #E24B4A"></span>danes</span>'+
+    '<span style="margin-left:auto">kliknite na projekt za podrobnosti</span></div>';
+  var el=document.getElementById('gantt-scroll');
+  if(el){var isDown=false,sX=0,sL=0;
+    el.addEventListener('mousedown',function(e){isDown=true;el.style.cursor='grabbing';sX=e.pageX-el.offsetLeft;sL=el.scrollLeft;});
+    el.addEventListener('mouseleave',function(){isDown=false;el.style.cursor='grab';});
+    el.addEventListener('mouseup',function(){isDown=false;el.style.cursor='grab';});
+    el.addEventListener('mousemove',function(e){if(!isDown)return;e.preventDefault();el.scrollLeft=sL-(e.pageX-el.offsetLeft-sX);});
+  }
+}
+
+function selectProjectFromGantt(st) {
+  switchTab('projects');
+  selectedSt = st;
+  renderProjects();
+  setTimeout(function(){
+    var el=document.getElementById('inline-detail-'+st);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  }, 80);
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  ['projects','engineers','gantt'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+  });
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',['projects','engineers','gantt'][i]===tab);
+  });
+  if(tab==='engineers')renderEngineers();
+  if(tab==='gantt')renderGantt();
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function openCfg(){
+  document.getElementById('cfg-url').value=SCRIPT_URL||'';
+  document.getElementById('cfg-modal').classList.add('open');
+}
+function closeCfg(){document.getElementById('cfg-modal').classList.remove('open')}
+function saveCfg(){
+  const url=document.getElementById('cfg-url').value.trim();
+  if(!url)return;
+  SCRIPT_URL=url;
+  localStorage.setItem('geo_script_url',url);
+  document.getElementById('cfg-modal').classList.remove('open');
+  document.getElementById('cfg-banner').style.display='none';
+  loadAll();
+}
+document.getElementById('cfg-modal').addEventListener('click',e=>{if(e.target===document.getElementById('cfg-modal'))closeCfg()});
+document.getElementById('phase-modal').addEventListener('click',e=>{if(e.target===document.getElementById('phase-modal'))closePhaseModal()});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if(SCRIPT_URL){document.getElementById('cfg-banner').style.display='none';loadAll();}
+else{updateMetrics();renderProjects();}
+</script>
+</body>
+</html>
