@@ -178,15 +178,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 </div>
 
 <div id="tab-finance" style="display:none">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <span class="stitle">Finančni status projektov</span>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-s" id="fsort-vrednost" onclick="setFinanceSort('vrednost')" style="padding:4px 10px;font-size:12px">Po vrednosti</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-s" id="fsort-dolg" onclick="setFinanceSort('dolg')" style="padding:4px 10px;font-size:12px">Po dolgu</button>
       <button class="btn btn-s" id="fsort-neobracu" onclick="setFinanceSort('neobracu')" style="padding:4px 10px;font-size:12px">Nefakturirano</button>
+      <button class="btn btn-s" id="fsort-racuni" onclick="setFinanceSort('racuni')" style="padding:4px 10px;font-size:12px">Po izstavljenem</button>
+      <button class="btn btn-s" id="fsort-status" onclick="setFinanceSort('status')" style="padding:4px 10px;font-size:12px">Po statusu</button>
     </div>
   </div>
-  <div id="finance-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>
+  <div class="search-row" style="margin-bottom:12px">
+    <input id="fq" type="search" placeholder="Išči projekt, naročnika…" oninput="renderFinance()">
+    <select id="ff-skupina" onchange="renderFinance()"><option value="">Vse skupiny</option></select>
+    <select id="ff-status" onchange="renderFinance()">
+      <option value="">Vsi statusi plačil</option>
+      <option value="zamuda">Zamuda pri plačilu</option>
+      <option value="caka">Čaka plačilo</option>
+      <option value="nefakt">Ni fakturirano</option>
+      <option value="placano">Plačano</option>
+    </select>
+  </div>
+  <div id="finance-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
   <div id="finance-list"></div>
 </div>
 
@@ -907,7 +919,7 @@ let financeSort = 'dolg';
 
 function setFinanceSort(s) {
   financeSort = s;
-  ['vrednost','dolg','neobracu'].forEach(function(k){
+  ['dolg','neobracu','racuni','status'].forEach(function(k){
     var btn = document.getElementById('fsort-'+k);
     if(!btn) return;
     if(k===s){ btn.style.background='var(--g-bg)';btn.style.color='var(--g-tc)';btn.style.borderColor='var(--g)'; }
@@ -919,7 +931,7 @@ function setFinanceSort(s) {
 function parseEur(v) {
   if(!v && v!==0) return 0;
   if(typeof v === 'number') return v;
-  return parseFloat(String(v).replace(/[€\s.]/g,'').replace(',','.')) || 0;
+  return parseFloat(String(v).replace(/[€ .]/g,'').replace(',','.')) || 0;
 }
 
 function fmtEur(n) {
@@ -927,74 +939,101 @@ function fmtEur(n) {
   return n.toLocaleString('sl-SI',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' €';
 }
 
+function getPayStatus(p) {
+  var dolg  = parseEur(p.dolgDDV);
+  var neObr = parseEur(p.neObracuneno);
+  var racu  = parseEur(p.racuniDDV);
+  var pril  = parseEur(p.priliviDDV);
+  if(dolg > 0 && p.rok && new Date(p.rok) < new Date()) return 'zamuda';
+  if(dolg > 0) return 'caka';
+  if(neObr > 0) return 'nefakt';
+  if(racu > 0 && pril >= racu) return 'placano';
+  return 'other';
+}
+
+var PAY_LABELS = {
+  zamuda:{lbl:'Zamuda pri plačilu',bg:'#FCEBEB',tc:'#A32D2D',ord:0},
+  caka:  {lbl:'Čaka plačilo',      bg:'#FAEEDA',tc:'#854F0B',ord:1},
+  nefakt:{lbl:'Ni fakturirano',    bg:'#E6F1FB',tc:'#185FA5',ord:2},
+  placano:{lbl:'Plačano',          bg:'#E4F2EC',tc:'#0F6E56',ord:3},
+  other: {lbl:'—',                 bg:'var(--bg)',tc:'var(--tx3)',ord:4},
+};
+
+function populateFinanceFilters() {
+  var sk = [...new Set(allProjects.map(function(p){return p.skupina;}).filter(Boolean))].sort();
+  var sel = document.getElementById('ff-skupina');
+  if(!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Vse skupiny</option>' +
+    sk.map(function(s){return '<option value="'+s+'"'+(s===cur?' selected':'')+'>'+s+'</option>';}).join('');
+}
+
 function renderFinance() {
-  var projects = allProjects.filter(function(p){ return p.vrednost; });
+  populateFinanceFilters();
+  var q  = (document.getElementById('fq')?.value||'').toLowerCase();
+  var sk = document.getElementById('ff-skupina')?.value||'';
+  var fs = document.getElementById('ff-status')?.value||'';
+
+  var projects = allProjects.filter(function(p){
+    if(!p.vrednost && !p.racuniDDV && !p.dolgDDV) return false;
+    if(q && ![p.st,p.projekt,p.narocnik,p.vodjaProjekta].join(' ').toLowerCase().includes(q)) return false;
+    if(sk && p.skupina !== sk) return false;
+    if(fs && getPayStatus(p) !== fs) return false;
+    return true;
+  });
 
   // Sort
   projects = projects.slice().sort(function(a,b){
-    if(financeSort==='vrednost') return parseEur(b.vrednost)-parseEur(a.vrednost);
     if(financeSort==='dolg')     return parseEur(b.dolgDDV)-parseEur(a.dolgDDV);
     if(financeSort==='neobracu') return parseEur(b.neObracuneno)-parseEur(a.neObracuneno);
+    if(financeSort==='racuni')   return parseEur(b.racuniDDV)-parseEur(a.racuniDDV);
+    if(financeSort==='status')   return (PAY_LABELS[getPayStatus(a)]?.ord||9)-(PAY_LABELS[getPayStatus(b)]?.ord||9);
     return 0;
   });
 
-  // Summary totals
-  var totVrednost=0, totRacuni=0, totPrilivi=0, totDolg=0, totNeObr=0;
-  allProjects.forEach(function(p){
-    totVrednost += parseEur(p.vrednost);
-    totRacuni   += parseEur(p.racuniDDV);
-    totPrilivi  += parseEur(p.priliviDDV);
-    totDolg     += parseEur(p.dolgDDV);
-    totNeObr    += parseEur(p.neObracuneno);
+  // Summary — only for filtered projects
+  var totRacuni=0, totPrilivi=0, totDolg=0, totNeObr=0;
+  projects.forEach(function(p){
+    totRacuni  += parseEur(p.racuniDDV);
+    totPrilivi += parseEur(p.priliviDDV);
+    totDolg    += parseEur(p.dolgDDV);
+    totNeObr   += parseEur(p.neObracuneno);
   });
 
-  var isDark = window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
   var summaryEl = document.getElementById('finance-summary');
   if(summaryEl) summaryEl.innerHTML = [
-    {label:'Skupna vrednost',val:fmtEur(totVrednost),sub:'brez DDV',color:'var(--tx)'},
-    {label:'Izstavljeno',val:fmtEur(totRacuni),sub:'računi z DDV',color:'#185FA5'},
-    {label:'Prejeto',val:fmtEur(totPrilivi),sub:'prilivi z DDV',color:'#1D9E75'},
-    {label:'Dolg naročnikov',val:fmtEur(totDolg),sub:'neporavnano',color:totDolg>0?'#E24B4A':'#1D9E75'},
-    {label:'Nefakturirano',val:fmtEur(totNeObr),sub:'še ni računa',color:totNeObr>0?'#BA7517':'var(--tx)'},
+    {label:'Izstavljeno',        val:fmtEur(totRacuni),  sub:'računi z DDV',   color:'#185FA5'},
+    {label:'Prejeto',            val:fmtEur(totPrilivi), sub:'prilivi z DDV',  color:'#1D9E75'},
+    {label:'Dolg naročnikov',    val:fmtEur(totDolg),    sub:'neporavnano',    color:totDolg>0?'#E24B4A':'#1D9E75'},
+    {label:'Nefakturirano',      val:fmtEur(totNeObr),   sub:'še ni računa',   color:totNeObr>0?'#BA7517':'var(--tx)'},
   ].map(function(m){
     return '<div class="metric" style="border-left:3px solid '+m.color+'">'+
       '<div class="ml">'+m.label+'</div>'+
       '<div class="mv" style="font-size:18px;color:'+m.color+'">'+m.val+'</div>'+
       '<div class="ms">'+m.sub+'</div></div>';
-  }).join('');
+  }).join('') + '<div class="metric" style="border-left:3px solid var(--bdr);background:var(--bg)">'+
+    '<div class="ml">Projektov</div>'+
+    '<div class="mv" style="font-size:18px">'+projects.length+'</div>'+
+    '<div class="ms">v prikazu</div></div>';
 
-  // Project rows
+  // List
   var listEl = document.getElementById('finance-list');
   if(!listEl) return;
-  if(!projects.length){ listEl.innerHTML='<div class="empty"><i class="ti ti-receipt-off"></i>Ni finančnih podatkov.</div>'; return; }
+  if(!projects.length){ listEl.innerHTML='<div class="empty"><i class="ti ti-receipt-off"></i>Ni rezultatov.</div>'; return; }
 
   listEl.innerHTML = projects.map(function(p){
-    var vred  = parseEur(p.vrednost);
     var racu  = parseEur(p.racuniDDV);
     var pril  = parseEur(p.priliviDDV);
     var dolg  = parseEur(p.dolgDDV);
     var neObr = parseEur(p.neObracuneno);
-    var izv   = parseFloat(p.izvedeno)||0;
+    var vred  = parseEur(p.vrednost);
     var pctNeObr = parseFloat(p.pctNeObr)||0;
-
-    // Payment status
-    var payStatus, payBg, payTc;
-    if(dolg > 0 && p.rok && new Date(p.rok) < new Date()) {
-      payStatus='Zamuda pri plačilu'; payBg='#FCEBEB'; payTc='#A32D2D';
-    } else if(dolg > 0) {
-      payStatus='Čaka plačilo'; payBg='#FAEEDA'; payTc='#854F0B';
-    } else if(neObr > 0) {
-      payStatus='Ni fakturirano'; payBg='#E6F1FB'; payTc='#185FA5';
-    } else if(racu > 0 && pril >= racu) {
-      payStatus='Plačano'; payBg='#E4F2EC'; payTc='#0F6E56';
-    } else {
-      payStatus='—'; payBg='var(--bg)'; payTc='var(--tx3)';
-    }
-
-    // Progress bar: how much received vs invoiced
+    var ps = getPayStatus(p);
+    var pl = PAY_LABELS[ps]||PAY_LABELS.other;
     var payPct = racu > 0 ? Math.min(Math.round(pril/racu*100),100) : 0;
 
-    return '<div style="background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:8px">'+
+    return '<div style="background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s" '+
+      'onclick="goToProject(''+p.st+'')" onmouseover="this.style.borderColor='var(--g)'" onmouseout="this.style.borderColor='var(--bdr)'">'+
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">'+
         '<div>'+
           '<div style="font-size:14px;font-weight:500;color:var(--tx)">'+p.st+' · '+p.projekt+'</div>'+
@@ -1003,28 +1042,33 @@ function renderFinance() {
             (p.rok?' &nbsp;·&nbsp; Rok: '+fmt(p.rok):'')+
           '</div>'+
         '</div>'+
-        '<span style="font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500;background:'+payBg+';color:'+payTc+'">'+payStatus+'</span>'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500;background:'+pl.bg+';color:'+pl.tc+'">'+pl.lbl+'</span>'+
+          '<span style="font-size:11px;color:var(--tx3)">→</span>'+
+        '</div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Vrednost</div><div style="font-size:13px;font-weight:500;color:var(--tx)">'+fmtEur(vred)+'</div></div>'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Izstavljeno</div><div style="font-size:13px;font-weight:500;color:#185FA5">'+fmtEur(racu)+'</div></div>'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Prejeto</div><div style="font-size:13px;font-weight:500;color:#1D9E75">'+fmtEur(pril)+'</div></div>'+
+        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Vrednost</div>'+
+          '<div style="font-size:13px;font-weight:500;color:var(--tx)">'+fmtEur(vred)+'</div></div>'+
+        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Izstavljeno</div>'+
+          '<div style="font-size:13px;font-weight:500;color:#185FA5">'+fmtEur(racu)+'</div></div>'+
+        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Prejeto</div>'+
+          '<div style="font-size:13px;font-weight:500;color:#1D9E75">'+fmtEur(pril)+'</div></div>'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Dolg</div>'+
-          '<div style="font-size:13px;font-weight:500;color:'+(dolg>0?'#E24B4A':'#1D9E75')+'">'+fmtEur(dolg)+'</div></div>'+
+          '<div style="font-size:13px;font-weight:500;color:'+(dolg>0?'#E24B4A':'var(--tx2)')+'">'+fmtEur(dolg)+'</div></div>'+
       '</div>'+
-      // Payment progress bar
       (racu>0?
-        '<div style="margin-bottom:6px">'+
+        '<div>'+
           '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:4px">'+
-            '<span>Plačano od izstavljenega</span><span style="font-weight:500;color:var(--tx)">'+payPct+'%</span>'+
+            '<span>Plačano od izstavljenega</span>'+
+            '<span style="font-weight:500;color:var(--tx)">'+payPct+'%</span>'+
           '</div>'+
-          '<div style="height:6px;border-radius:3px;background:var(--bdr)">'+
+          '<div style="height:5px;border-radius:3px;background:var(--bdr)">'+
             '<div style="height:100%;width:'+payPct+'%;border-radius:3px;background:'+(payPct>=100?'#1D9E75':payPct>50?'#EF9F27':'#E24B4A')+';transition:width .4s"></div>'+
           '</div>'+
         '</div>':'')+
-      // Nefakturirano warning
       (neObr>0?
-        '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#854F0B;background:#FAEEDA;padding:6px 10px;border-radius:6px;margin-top:6px">'+
+        '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#854F0B;background:#FAEEDA;padding:6px 10px;border-radius:6px;margin-top:8px">'+
           '<i class="ti ti-alert-triangle" style="font-size:14px"></i>'+
           'Nefakturirano: <strong>'+fmtEur(neObr)+'</strong>'+(pctNeObr?' ('+pctNeObr+'%)':'')+
         '</div>':'')+
@@ -1032,40 +1076,16 @@ function renderFinance() {
   }).join('');
 }
 
-function switchTab(tab){
-  ['projects','engineers','gantt','finance'].forEach(t=>{
-    const el=document.getElementById('tab-'+t);
-    if(el) el.style.display=t===tab?'':'none';
-  });
-  document.querySelectorAll('.tab').forEach((b,i)=>{
-    b.classList.toggle('active',['projects','engineers','gantt','finance'][i]===tab);
-  });
-  if(tab==='engineers')renderEngineers();
-  if(tab==='gantt')renderGantt();
-  if(tab==='finance'){setFinanceSort(financeSort);renderFinance();}
+function goToProject(st) {
+  switchTab('projects');
+  selectedSt = st;
+  renderProjects();
+  setTimeout(function(){
+    var el = document.getElementById('inline-detail-'+st);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    else {
+      var cards = document.querySelectorAll('.pcard.sel');
+      if(cards.length) cards[0].scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }, 80);
 }
-
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
-function openCfg(){
-  document.getElementById('cfg-url').value=SCRIPT_URL||'';
-  document.getElementById('cfg-modal').classList.add('open');
-}
-function closeCfg(){document.getElementById('cfg-modal').classList.remove('open')}
-function saveCfg(){
-  const url=document.getElementById('cfg-url').value.trim();
-  if(!url)return;
-  SCRIPT_URL=url;
-  localStorage.setItem('geo_script_url',url);
-  document.getElementById('cfg-modal').classList.remove('open');
-  document.getElementById('cfg-banner').style.display='none';
-  loadAll();
-}
-document.getElementById('cfg-modal').addEventListener('click',e=>{if(e.target===document.getElementById('cfg-modal'))closeCfg()});
-document.getElementById('phase-modal').addEventListener('click',e=>{if(e.target===document.getElementById('phase-modal'))closePhaseModal()});
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-if(SCRIPT_URL){document.getElementById('cfg-banner').style.display='none';loadAll();}
-else{updateMetrics();renderProjects();}
-</script>
-</body>
-</html>
