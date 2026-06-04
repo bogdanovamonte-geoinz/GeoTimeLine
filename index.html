@@ -714,24 +714,29 @@ function setGanttScale(scale) {
 }
 
 function renderGantt() {
+  var container = document.getElementById('gantt-container');
   var dated = allPhases.filter(function(ph){return ph.datum_zacetka&&ph.datum_konca&&ph.odgovorna_oseba;});
-  if (!dated.length) { document.getElementById('gantt-container').innerHTML='<div class="empty"><i class="ti ti-chart-gantt"></i>Ni faz z datumi.</div>'; return; }
-  // Use Vodja sheet order for known persons, then append any extra persons from phases
+  if (!dated.length) { container.innerHTML='<div class="empty"><i class="ti ti-chart-gantt"></i>Ni faz z datumi.</div>'; return; }
+
+  // Persons list
   var knownPersons = allPersons.length ? allPersons : [];
   var phasePersons = Array.from(new Set(dated.map(function(ph){return ph.odgovorna_oseba;}).filter(Boolean)));
-  var extraPersons = phasePersons.filter(function(p){ return knownPersons.indexOf(p) === -1; });
-  var personOrder = knownPersons.concat(extraPersons);
-  var personsInUse = personOrder.filter(function(p){return dated.some(function(ph){return ph.odgovorna_oseba===p;});});
+  var extraPersons = phasePersons.filter(function(p){ return knownPersons.indexOf(p)===-1; });
+  var personsInUse = knownPersons.concat(extraPersons).filter(function(p){
+    return dated.some(function(ph){return ph.odgovorna_oseba===p;});
+  });
+
+  // Date range
   var allStarts = dated.map(function(ph){return new Date(ph.datum_zacetka);});
   var allEnds   = dated.map(function(ph){return new Date(ph.datum_konca);});
   var dataMinD  = new Date(Math.min.apply(null,allStarts));
   var dataMaxD  = new Date(Math.max.apply(null,allEnds));
   var today = new Date();
   var minD, maxD;
-  if (ganttScale === 'month') {
+  if (ganttScale==='month') {
     minD = new Date(today.getFullYear(), today.getMonth()-1, 1);
     maxD = new Date(today.getFullYear(), today.getMonth()+2, 0);
-  } else if (ganttScale === 'quarter') {
+  } else if (ganttScale==='quarter') {
     var qm = Math.floor(today.getMonth()/3)*3;
     minD = new Date(today.getFullYear(), qm-1, 1);
     maxD = new Date(today.getFullYear(), qm+4, 0);
@@ -742,95 +747,135 @@ function renderGantt() {
   if (dataMinD < minD) minD = new Date(dataMinD.getFullYear(), dataMinD.getMonth(), 1);
   if (dataMaxD > maxD) maxD = dataMaxD;
   var totalMs = maxD - minD || 1;
+
+  // Ticks
   var ticks = []; var cur2 = new Date(minD);
-  if (ganttScale === 'month') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+7);} }
-  else if (ganttScale === 'quarter') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+14);} }
+  if (ganttScale==='month') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+7);} }
+  else if (ganttScale==='quarter') { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setDate(cur2.getDate()+14);} }
   else { while(cur2<=maxD){ticks.push(new Date(cur2));cur2.setMonth(cur2.getMonth()+1);} }
-  function xPct(ds){return Math.max(0,Math.min((new Date(ds)-minD)/totalMs,1));}
+
+  function xPct(ds){ return Math.max(0,Math.min((new Date(ds)-minD)/totalMs,1)); }
   function tickLabel(d){
     if(ganttScale==='month'||ganttScale==='quarter') return d.toLocaleDateString('sl-SI',{day:'numeric',month:'short'});
     return d.toLocaleDateString('sl-SI',{month:'short',year:'2-digit'});
   }
-  var isDark = window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
-  var colBdr=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
-  var colToday='#E24B4A', colTx=isDark?'#a09f9a':'#6b6b6b', colTx3=isDark?'#5a5958':'#a0a0a0';
-  var colSur=isDark?'#242424':'#ffffff', colAlt=isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.02)';
-  var PC=['#378ADD','#1D9E75','#7F77DD','#D85A30','#D4537E','#639922','#BA7517','#185FA5'];
-  var LW=110, RH=38, HH=36, BH=22, BP=(RH-BH)/2;
-  var MCW=ganttScale==='month'?90:ganttScale==='quarter'?60:52;
-  var CW=Math.max(600,ticks.length*MCW), TW=LW+CW, TH=HH+personsInUse.length*RH+4;
-  var s='';
-  s+='<rect width="'+CW+'" height="'+TH+'" fill="'+colSur+'"/>';
-  personsInUse.forEach(function(p,i){if(i%2===1)s+='<rect x="0" y="'+(HH+i*RH)+'" width="'+CW+'" height="'+RH+'" fill="'+colAlt+'"/>';});
-  ticks.forEach(function(t){
-    var x=xPct(t.toISOString().slice(0,10))*CW;
-    var isMajor=ganttScale==='year'?t.getMonth()===0:(ganttScale==='quarter'?t.getDate()<=7:false);
-    s+='<line x1="'+x+'" y1="'+HH+'" x2="'+x+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="'+(isMajor?1.5:0.5)+'" '+(isMajor?'':'stroke-dasharray="2,2"')+'"/>';
-    s+='<text x="'+(x+3)+'" y="'+(HH-12)+'" font-size="10" fill="'+(isMajor?colTx:colTx3)+'" font-weight="'+(isMajor?600:400)+'">'+tickLabel(t)+'</text>';
-  });
-  var todayX=xPct(today.toISOString().slice(0,10))*CW;
-  if(todayX>0&&todayX<CW){
-    s+='<line x1="'+todayX+'" y1="0" x2="'+todayX+'" y2="'+TH+'" stroke="'+colToday+'" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>';
-    s+='<rect x="'+(todayX-14)+'" y="2" width="28" height="14" rx="3" fill="'+colToday+'" opacity="0.9"/>';
-    s+='<text x="'+todayX+'" y="12" font-size="9" fill="white" font-weight="600" text-anchor="middle">danes</text>';
-  }
-  s+='<line x1="0" y1="'+HH+'" x2="'+CW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
 
-  var labelOverlay='';
+  var isDark = window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var colBdr  = isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+  var colToday= '#E24B4A';
+  var colTx   = isDark?'#a09f9a':'#6b6b6b';
+  var colTx3  = isDark?'#5a5958':'#a0a0a0';
+  var colSur  = isDark?'#242424':'#ffffff';
+  var colAlt  = isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.02)';
+  var PC = ['#378ADD','#1D9E75','#7F77DD','#D85A30','#D4537E','#639922','#BA7517','#185FA5'];
+
+  var LW=130, RH=38, HH=36, BH=22, BP=(RH-BH)/2;
+  var MCW = ganttScale==='month'?90:ganttScale==='quarter'?60:52;
+  var CW  = Math.max(500, ticks.length*MCW);
+  var TH  = HH + personsInUse.length*RH + 4;
+
+  // ── Build LABELS SVG (fixed left) ──────────────────────────────
+  var ls = '<svg width="'+LW+'" height="'+TH+'" xmlns="http://www.w3.org/2000/svg">';
+  ls += '<rect width="'+LW+'" height="'+TH+'" fill="'+colSur+'"/>';
+  ls += '<rect x="0" y="0" width="'+LW+'" height="'+HH+'" fill="'+colSur+'"/>';
+  ls += '<line x1="0" y1="'+HH+'" x2="'+LW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
   personsInUse.forEach(function(person,ri){
-    var y=HH+ri*RH;
-    s+='<line x1="0" y1="'+(y+RH)+'" x2="'+CW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
-    labelOverlay+='<rect x="0" y="'+y+'" width="'+LW+'" height="'+RH+'" fill="'+colSur+'"/>';
-    labelOverlay+='<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'" clip-path="url(#lclip)">'+person+'</text>';
-    labelOverlay+='<line x1="'+LW+'" y1="'+y+'" x2="'+LW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="1"/>';
-    var phases=dated.filter(function(ph){return ph.odgovorna_oseba===person;});
+    var y = HH + ri*RH;
+    if (ri%2===1) ls += '<rect x="0" y="'+y+'" width="'+LW+'" height="'+RH+'" fill="'+colAlt+'"/>';
+    ls += '<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'">';
+    // Truncate long names
+    var displayName = person.length > 16 ? person.slice(0,15)+'…' : person;
+    ls += displayName+'</text>';
+    ls += '<line x1="0" y1="'+(y+RH)+'" x2="'+LW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
+  });
+  ls += '<line x1="'+(LW-1)+'" y1="0" x2="'+(LW-1)+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+  ls += '</svg>';
+
+  // ── Build CHART SVG (scrollable) ───────────────────────────────
+  var cs = '<svg width="'+CW+'" height="'+TH+'" xmlns="http://www.w3.org/2000/svg">';
+  cs += '<rect width="'+CW+'" height="'+TH+'" fill="'+colSur+'"/>';
+
+  // Alternating rows
+  personsInUse.forEach(function(p,i){
+    if(i%2===1) cs += '<rect x="0" y="'+(HH+i*RH)+'" width="'+CW+'" height="'+RH+'" fill="'+colAlt+'"/>';
+  });
+
+  // Grid lines + tick labels
+  ticks.forEach(function(t){
+    var x = xPct(t.toISOString().slice(0,10))*CW;
+    var isMajor = ganttScale==='year'?t.getMonth()===0:(ganttScale==='quarter'?t.getDate()<=7:false);
+    cs += '<line x1="'+x+'" y1="'+HH+'" x2="'+x+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="'+(isMajor?1.5:0.5)+'" '+(isMajor?'':'stroke-dasharray="2,2"')+'"/>';
+    cs += '<text x="'+(x+3)+'" y="'+(HH-10)+'" font-size="10" fill="'+(isMajor?colTx:colTx3)+'" font-weight="'+(isMajor?600:400)+'">'+tickLabel(t)+'</text>';
+  });
+
+  // Today line
+  var todayX = xPct(today.toISOString().slice(0,10))*CW;
+  if(todayX>0&&todayX<CW){
+    cs += '<line x1="'+todayX+'" y1="0" x2="'+todayX+'" y2="'+TH+'" stroke="'+colToday+'" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>';
+    cs += '<rect x="'+(todayX-14)+'" y="2" width="28" height="14" rx="3" fill="'+colToday+'" opacity="0.9"/>';
+    cs += '<text x="'+todayX+'" y="12" font-size="9" fill="white" font-weight="600" text-anchor="middle">danes</text>';
+  }
+
+  // Header line
+  cs += '<line x1="0" y1="'+HH+'" x2="'+CW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+
+  // Rows + bars
+  personsInUse.forEach(function(person,ri){
+    var y = HH + ri*RH;
+    cs += '<line x1="0" y1="'+(y+RH)+'" x2="'+CW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
+    var phases = dated.filter(function(ph){return ph.odgovorna_oseba===person;});
     phases.forEach(function(ph,pi){
-      var bc=PC[pi%PC.length];
-      var x1=xPct(ph.datum_zacetka)*CW, x2=xPct(ph.datum_konca)*CW;
-      var bw=Math.max(x2-x1,4), by=y+BP;
-      var proj=allProjects.find(function(p){return String(p.st)===String(ph.projekt_st);});
-      var pname=proj?proj.st+' - '+proj.projekt:ph.projekt_st;
-      var tip=pname+' / '+ph.naziv_faze+'&#10;'+fmt(ph.datum_zacetka)+' - '+fmt(ph.datum_konca)+'&#10;Napredek: '+(ph.napredek||0)+'%';
-      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.3"><title>'+tip+'</title></rect>';
-      var pw=bw*(ph.napredek||0)/100;
-      if(pw>1) s+='<rect x="'+x1+'" y="'+by+'" width="'+pw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.9"><title>'+tip+'</title></rect>';
-      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="none" stroke="'+bc+'" stroke-width="1.5" opacity="0.7"><title>'+tip+'</title></rect>';
-      if(bw>32){var mc=Math.floor((bw-10)/6.5);var lbl=ph.naziv_faze.length>mc?ph.naziv_faze.slice(0,mc)+'...':ph.naziv_faze;s+='<text x="'+(x1+6)+'" y="'+(by+BH/2+4)+'" font-size="10" fill="'+bc+'" font-weight="600" style="pointer-events:none">'+lbl+'</text>';}
-      s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" data-pid="'+ph.projekt_st+'" class="gantt-click" style="cursor:pointer"><title>'+tip+'</title></rect>';
+      var bc = PC[pi%PC.length];
+      var x1 = xPct(ph.datum_zacetka)*CW;
+      var x2 = xPct(ph.datum_konca)*CW;
+      var bw = Math.max(x2-x1,4), by = y+BP;
+      var proj = allProjects.find(function(p){return String(p.st)===String(ph.projekt_st);});
+      var pname = proj?proj.st+' - '+proj.projekt:ph.projekt_st;
+      var tip = pname+' / '+ph.naziv_faze+'&#10;'+fmt(ph.datum_zacetka)+' - '+fmt(ph.datum_konca)+'&#10;Napredek: '+(ph.napredek||0)+'%';
+      cs += '<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.3"><title>'+tip+'</title></rect>';
+      var pw = bw*(ph.napredek||0)/100;
+      if(pw>1) cs += '<rect x="'+x1+'" y="'+by+'" width="'+pw+'" height="'+BH+'" rx="4" fill="'+bc+'" opacity="0.9"><title>'+tip+'</title></rect>';
+      cs += '<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="none" stroke="'+bc+'" stroke-width="1.5" opacity="0.7"><title>'+tip+'</title></rect>';
+      if(bw>32){var mc=Math.floor((bw-10)/6.5);var lbl=ph.naziv_faze.length>mc?ph.naziv_faze.slice(0,mc)+'...':ph.naziv_faze;cs+='<text x="'+(x1+6)+'" y="'+(by+BH/2+4)+'" font-size="10" fill="'+bc+'" font-weight="600" style="pointer-events:none">'+lbl+'</text>';}
+      cs += '<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" data-pid="'+ph.projekt_st+'" class="gantt-click" style="cursor:pointer"><title>'+tip+'</title></rect>';
     });
   });
+  cs += '</svg>';
 
-  var leg=Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
+  // Legend
+  var leg = Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></span>'+n+'</span>';
   }).join('');
-  document.getElementById('gantt-container').innerHTML=
-    '<div style="overflow-x:auto;padding-bottom:4px;cursor:grab" id="gantt-scroll">'+s+'</div>'+
+
+  container.innerHTML =
+    '<div style="display:flex;border:.5px solid '+colBdr+';border-radius:10px;overflow:hidden">'+
+    '<div style="flex-shrink:0">'+ls+'</div>'+
+    '<div style="overflow-x:auto;flex:1;cursor:grab" id="gantt-scroll">'+cs+'</div>'+
+    '</div>'+
     '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:'+colTx3+'">'+
     '<span>Faze:</span>'+leg+
     '<span style="margin-left:8px;display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#1D9E75;border-radius:2px;opacity:.9;display:inline-block"></span>opravljeno</span>'+
     '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:#1D9E75;border-radius:2px;opacity:.3;display:inline-block"></span>preostalo</span>'+
-    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#E24B4A;display:inline-block;border-right:2px dashed #E24B4A"></span>danes</span>'+
-    '<span style="margin-left:auto">kliknite na projekt za podrobnosti</span></div>';
-  var el=document.getElementById('gantt-scroll');
-  if(el){var isDown=false,sX=0,sL=0,moved=false;
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#E24B4A;display:inline-block"></span>danes</span>'+
+    '<span style="margin-left:auto">kliknite na projekt za podrobnosti</span>'+
+    '</div>';
+
+  // Drag to scroll
+  var el = document.getElementById('gantt-scroll');
+  if(el){
+    var isDown=false,sX=0,sL=0,moved=false;
     el.addEventListener('mousedown',function(e){isDown=true;moved=false;el.style.cursor='grabbing';sX=e.pageX-el.offsetLeft;sL=el.scrollLeft;});
     el.addEventListener('mouseleave',function(){isDown=false;el.style.cursor='grab';});
     el.addEventListener('mouseup',function(){isDown=false;el.style.cursor='grab';});
     el.addEventListener('mousemove',function(e){if(!isDown)return;moved=true;e.preventDefault();el.scrollLeft=sL-(e.pageX-el.offsetLeft-sX);});
-    el.addEventListener('scroll',function(){
-      var labelsEl=document.getElementById('gantt-labels');
-      if(labelsEl) labelsEl.scrollTop=el.scrollTop;
-    });
     el.addEventListener('click',function(e){
       if(moved)return;
       var t=e.target;
-      while(t&&t!==el){
-        if(t.dataset&&t.dataset.pid){selectProjectFromGantt(t.dataset.pid);return;}
-        t=t.parentNode;
-      }
+      while(t&&t!==el){if(t.dataset&&t.dataset.pid){selectProjectFromGantt(t.dataset.pid);return;}t=t.parentNode;}
     });
   }
 }
+
 
 function selectProjectFromGantt(st) {
   switchTab('projects');
