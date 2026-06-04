@@ -1033,7 +1033,7 @@ function renderFinance() {
     var payPct = racu > 0 ? Math.min(Math.round(pril/racu*100),100) : 0;
 
     return '<div style="background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s" '+
-      'onclick="goToProject(''+p.st+'')" onmouseover="this.style.borderColor='var(--g)'" onmouseout="this.style.borderColor='var(--bdr)'">'+
+      'onclick="goToProject(\''+p.st+'\')" onmouseover="this.style.borderColor=\'var(--g)\'" onmouseout="this.style.borderColor=\'var(--bdr)\'">'+
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">'+
         '<div>'+
           '<div style="font-size:14px;font-weight:500;color:var(--tx)">'+p.st+' · '+p.projekt+'</div>'+
