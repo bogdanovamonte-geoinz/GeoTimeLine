@@ -367,9 +367,9 @@ async function loadAll() {
     api('getPhases'),
     api('getPersons'),
   ]);
-  if (rp?.projects) allProjects = rp.projects;
-  if (rf?.phases)   allPhases   = rf.phases;
-  if (rv?.persons)  allPersons  = rv.persons;
+  if ((rp&&rp.projects)) allProjects = rp.projects;
+  if ((rf&&rf.phases))   allPhases   = rf.phases;
+  if ((rv&&rv.persons))  allPersons  = rv.persons;
   populateFilters();
   updateMetrics();
   renderProjects();
@@ -418,8 +418,8 @@ function clearStatuses() {
 }
 
 function filteredProjects() {
-  const q  = (document.getElementById('q')?.value||'').toLowerCase();
-  const sk = document.getElementById('f-skupina')?.value||'';
+  const q  = (( document.getElementById('q') ? document.getElementById('q').value : '')||'').toLowerCase();
+  const sk = (document.getElementById('f-skupina') ? document.getElementById('f-skupina').value : '')||'';
   return allProjects.filter(p => {
     if (q && ![p.st,p.projekt,p.narocnik].join(' ').toLowerCase().includes(q)) return false;
     if (sk && p.skupina !== sk) return false;
@@ -547,7 +547,7 @@ function buildDetailHtml(p, phs) {
   </div>`;
 }
 
-function toggleFaza(id){document.getElementById(id)?.classList.toggle('open')}
+function toggleFaza(id){var _el=document.getElementById(id); if(_el) _el.classList.toggle('open')}
 
 function updateSlider(input, rowNum, totalDays) {
   const dayVal = parseInt(input.value);
@@ -582,7 +582,7 @@ async function deletePhase(rowNum, st) {
   await api('deletePhase', { id: rowNum });
   toast('Faza izbrisana');
   const rf = await api('getPhases');
-  if (rf?.phases) allPhases = rf.phases;
+  if ((rf&&rf.phases)) allPhases = rf.phases;
   renderProjects(); updateMetrics();
 }
 
@@ -596,13 +596,13 @@ function openPhaseModal(projektSt, editRowNum) {
         ...allProjects.map(p=>p.vodjaProjekta),
         ...allProjects.map(p=>p.vodjaTerma),
       ].filter(Boolean))].sort();
-  const personOpts = basePersons.map(p=>`<option value="${p}"${ph?.odgovorna_oseba===p?' selected':''}>${p}</option>`).join('');
+  const personOpts = basePersons.map(p=>`<option value="${p}"${(ph&&ph.odgovorna_oseba)===p?' selected':''}>${p}</option>`).join('');
 
   document.getElementById('phase-modal-content').innerHTML = `
     <div class="modal-title"><i class="ti ti-${editRowNum?'edit':'stack-push'}"></i>${editRowNum?'Uredi fazo':'Dodaj fazo'}</div>
     <div class="fg">
       <label>Naziv faze</label>
-      <input id="pf-name" type="text" value="${ph?.naziv_faze||''}" placeholder="npr. Priprava, Terensko delo, Elaborat…">
+      <input id="pf-name" type="text" value="${(ph&&ph.naziv_faze)||''}" placeholder="npr. Priprava, Terensko delo, Elaborat…">
     </div>
     <div class="fg">
       <label>Odgovorna oseba</label>
@@ -612,20 +612,20 @@ function openPhaseModal(projektSt, editRowNum) {
         <option value="__new__">+ Vnesite ročno…</option>
       </select>
       <input id="pf-resp-manual" type="text" placeholder="Ime in priimek"
-        style="display:none;margin-top:6px" value="${ph?.odgovorna_oseba||''}">
+        style="display:none;margin-top:6px" value="${(ph&&ph.odgovorna_oseba)||''}">
     </div>
     <div class="fg-row">
-      <div class="fg"><label>Datum začetka</label><input id="pf-start" type="date" value="${ph?.datum_zacetka||''}"></div>
-      <div class="fg"><label>Datum konca</label><input id="pf-end" type="date" value="${ph?.datum_konca||''}"></div>
+      <div class="fg"><label>Datum začetka</label><input id="pf-start" type="date" value="${(ph&&ph.datum_zacetka)||''}"></div>
+      <div class="fg"><label>Datum konca</label><input id="pf-end" type="date" value="${(ph&&ph.datum_konca)||''}"></div>
     </div>
     <div class="dur-preview" id="dur-preview">Trajanje: <strong id="dur-days">—</strong></div>
     ${editRowNum?`
     <div class="fg">
-      <label>Napredek: <span id="pf-prog-val">${ph?.napredek||0}%</span></label>
-      <input type="range" min="0" max="100" step="5" value="${ph?.napredek||0}"
+      <label>Napredek: <span id="pf-prog-val">${(ph&&ph.napredek)||0}%</span></label>
+      <input type="range" min="0" max="100" step="5" value="${(ph&&ph.napredek)||0}"
         oninput="document.getElementById('pf-prog-val').textContent=this.value+'%'" id="pf-prog">
     </div>`:''}
-    <div class="fg"><label>Opombe</label><textarea id="pf-notes" rows="2" placeholder="Opombe…">${ph?.opombe||''}</textarea></div>
+    <div class="fg"><label>Opombe</label><textarea id="pf-notes" rows="2" placeholder="Opombe…">${(ph&&ph.opombe)||''}</textarea></div>
     <div class="ferr" id="pf-err"></div>
     <div class="modal-footer">
       <button class="btn btn-s" onclick="closePhaseModal()">Prekliči</button>
@@ -638,7 +638,7 @@ function openPhaseModal(projektSt, editRowNum) {
     document.getElementById('pf-resp-manual').style.display = this.value==='__new__'?'block':'none';
   });
   function updDur(){
-    const s=document.getElementById('pf-start')?.value,e=document.getElementById('pf-end')?.value;
+    const s=(document.getElementById('pf-start') ? document.getElementById('pf-start').value : ''),e=(document.getElementById('pf-end') ? document.getElementById('pf-end').value : '');
     const prev=document.getElementById('dur-preview');
     if(s&&e&&prev){const d=days(s,e);prev.style.display='block';document.getElementById('dur-days').textContent=d+' dni';}
   }
@@ -647,7 +647,7 @@ function openPhaseModal(projektSt, editRowNum) {
 
   document.getElementById('phase-modal').classList.add('open');
   // Focus first input
-  setTimeout(()=>document.getElementById('pf-name')?.focus(), 50);
+  setTimeout(function(){var _pn=document.getElementById('pf-name'); if(_pn) _pn.focus();}, 50);
 }
 
 function closePhaseModal(){document.getElementById('phase-modal').classList.remove('open')}
@@ -658,8 +658,8 @@ async function savePhase(projektSt, editRowNum) {
   const resp  = respSel==='__new__' ? document.getElementById('pf-resp-manual').value.trim() : respSel;
   const start = document.getElementById('pf-start').value;
   const end   = document.getElementById('pf-end').value;
-  const notes = document.getElementById('pf-notes')?.value||'';
-  const prog  = editRowNum ? parseInt(document.getElementById('pf-prog')?.value||0) : 0;
+  const notes = (document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : '')||'';
+  const prog  = editRowNum ? parseInt((document.getElementById('pf-prog') ? document.getElementById('pf-prog').value : 0)||0) : 0;
   const errEl = document.getElementById('pf-err');
   if (!name) { errEl.style.display='block'; errEl.textContent='Vnesite naziv faze'; return; }
   if (!resp) { errEl.style.display='block'; errEl.textContent='Izberite odgovorno osebo'; return; }
@@ -697,7 +697,7 @@ async function savePhase(projektSt, editRowNum) {
 
   // Reload to get real row numbers
   const rf = await api('getPhases');
-  if (rf?.phases) allPhases = rf.phases;
+  if ((rf&&rf.phases)) allPhases = rf.phases;
   renderProjects(); updateMetrics();
 }
 
@@ -970,9 +970,9 @@ function populateFinanceFilters() {
 
 function renderFinance() {
   populateFinanceFilters();
-  var q  = (document.getElementById('fq')?.value||'').toLowerCase();
-  var sk = document.getElementById('ff-skupina')?.value||'';
-  var fs = document.getElementById('ff-status')?.value||'';
+  var q  = ((document.getElementById('fq') ? document.getElementById('fq').value : '')||'').toLowerCase();
+  var sk = (document.getElementById('ff-skupina') ? document.getElementById('ff-skupina').value : '')||'';
+  var fs = (document.getElementById('ff-status') ? document.getElementById('ff-status').value : '')||'';
 
   var projects = allProjects.filter(function(p){
     if(!p.vrednost && !p.racuniDDV && !p.dolgDDV) return false;
@@ -987,7 +987,7 @@ function renderFinance() {
     if(financeSort==='dolg')     return parseEur(b.dolgDDV)-parseEur(a.dolgDDV);
     if(financeSort==='neobracu') return parseEur(b.neObracuneno)-parseEur(a.neObracuneno);
     if(financeSort==='racuni')   return parseEur(b.racuniDDV)-parseEur(a.racuniDDV);
-    if(financeSort==='status')   return (PAY_LABELS[getPayStatus(a)]?.ord||9)-(PAY_LABELS[getPayStatus(b)]?.ord||9);
+    if(financeSort==='status')   return ((PAY_LABELS[getPayStatus(a)] ? PAY_LABELS[getPayStatus(a)].ord : 9)||9)-((PAY_LABELS[getPayStatus(b)] ? PAY_LABELS[getPayStatus(b)].ord : 9)||9);
     return 0;
   });
 
