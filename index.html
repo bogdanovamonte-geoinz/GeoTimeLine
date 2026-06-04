@@ -716,7 +716,11 @@ function setGanttScale(scale) {
 function renderGantt() {
   var dated = allPhases.filter(function(ph){return ph.datum_zacetka&&ph.datum_konca&&ph.odgovorna_oseba;});
   if (!dated.length) { document.getElementById('gantt-container').innerHTML='<div class="empty"><i class="ti ti-chart-gantt"></i>Ni faz z datumi.</div>'; return; }
-  var personOrder = allPersons.length ? allPersons : Array.from(new Set(dated.map(function(ph){return ph.odgovorna_oseba;}).filter(Boolean)));
+  // Use Vodja sheet order for known persons, then append any extra persons from phases
+  var knownPersons = allPersons.length ? allPersons : [];
+  var phasePersons = Array.from(new Set(dated.map(function(ph){return ph.odgovorna_oseba;}).filter(Boolean)));
+  var extraPersons = phasePersons.filter(function(p){ return knownPersons.indexOf(p) === -1; });
+  var personOrder = knownPersons.concat(extraPersons);
   var personsInUse = personOrder.filter(function(p){return dated.some(function(ph){return ph.odgovorna_oseba===p;});});
   var allStarts = dated.map(function(ph){return new Date(ph.datum_zacetka);});
   var allEnds   = dated.map(function(ph){return new Date(ph.datum_konca);});
@@ -771,12 +775,14 @@ function renderGantt() {
     s+='<text x="'+todayX+'" y="12" font-size="9" fill="white" font-weight="600" text-anchor="middle">danes</text>';
   }
   s+='<line x1="0" y1="'+HH+'" x2="'+TW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
-  s+='<rect x="0" y="0" width="'+LW+'" height="'+TH+'" fill="'+colSur+'"/>';
   s+='<line x1="'+LW+'" y1="0" x2="'+LW+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+  var labelOverlay='';
   personsInUse.forEach(function(person,ri){
     var y=HH+ri*RH;
     s+='<line x1="0" y1="'+(y+RH)+'" x2="'+TW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
-    s+='<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'" clip-path="url(#lclip)">'+person+'</text>';
+    labelOverlay+='<rect x="0" y="'+y+'" width="'+LW+'" height="'+RH+'" fill="'+colSur+'"/>';
+    labelOverlay+='<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'" clip-path="url(#lclip)">'+person+'</text>';
+    labelOverlay+='<line x1="'+LW+'" y1="'+y+'" x2="'+LW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="1"/>';
     var phases=dated.filter(function(ph){return ph.odgovorna_oseba===person;});
     phases.forEach(function(ph,pi){
       var bc=PC[pi%PC.length];
@@ -793,6 +799,7 @@ function renderGantt() {
       s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" data-pid="'+ph.projekt_st+'" class="gantt-click" style="cursor:pointer"><title>'+tip+'</title></rect>';
     });
   });
+  s+=labelOverlay;
   s+='<defs><clipPath id="lclip"><rect x="0" y="0" width="'+(LW-4)+'" height="'+TH+'"/></clipPath></defs></svg>';
   var leg=Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></span>'+n+'</span>';
