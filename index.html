@@ -759,34 +759,34 @@ function renderGantt() {
   var LW=110, RH=38, HH=36, BH=22, BP=(RH-BH)/2;
   var MCW=ganttScale==='month'?90:ganttScale==='quarter'?60:52;
   var CW=Math.max(600,ticks.length*MCW), TW=LW+CW, TH=HH+personsInUse.length*RH+4;
-  var s='<svg class="gantt-svg" viewBox="0 0 '+TW+' '+TH+'" width="'+TW+'" height="'+TH+'" xmlns="http://www.w3.org/2000/svg">';
-  s+='<rect width="'+TW+'" height="'+TH+'" fill="'+colSur+'" rx="10"/>';
-  personsInUse.forEach(function(p,i){if(i%2===1)s+='<rect x="0" y="'+(HH+i*RH)+'" width="'+TW+'" height="'+RH+'" fill="'+colAlt+'"/>';});
+  var s='';
+  s+='<rect width="'+CW+'" height="'+TH+'" fill="'+colSur+'"/>';
+  personsInUse.forEach(function(p,i){if(i%2===1)s+='<rect x="0" y="'+(HH+i*RH)+'" width="'+CW+'" height="'+RH+'" fill="'+colAlt+'"/>';});
   ticks.forEach(function(t){
-    var x=LW+xPct(t.toISOString().slice(0,10))*CW;
+    var x=xPct(t.toISOString().slice(0,10))*CW;
     var isMajor=ganttScale==='year'?t.getMonth()===0:(ganttScale==='quarter'?t.getDate()<=7:false);
     s+='<line x1="'+x+'" y1="'+HH+'" x2="'+x+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="'+(isMajor?1.5:0.5)+'" '+(isMajor?'':'stroke-dasharray="2,2"')+'"/>';
     s+='<text x="'+(x+3)+'" y="'+(HH-12)+'" font-size="10" fill="'+(isMajor?colTx:colTx3)+'" font-weight="'+(isMajor?600:400)+'">'+tickLabel(t)+'</text>';
   });
-  var todayX=LW+xPct(today.toISOString().slice(0,10))*CW;
-  if(todayX>LW&&todayX<TW){
+  var todayX=xPct(today.toISOString().slice(0,10))*CW;
+  if(todayX>0&&todayX<CW){
     s+='<line x1="'+todayX+'" y1="0" x2="'+todayX+'" y2="'+TH+'" stroke="'+colToday+'" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>';
     s+='<rect x="'+(todayX-14)+'" y="2" width="28" height="14" rx="3" fill="'+colToday+'" opacity="0.9"/>';
     s+='<text x="'+todayX+'" y="12" font-size="9" fill="white" font-weight="600" text-anchor="middle">danes</text>';
   }
-  s+='<line x1="0" y1="'+HH+'" x2="'+TW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
-  s+='<line x1="'+LW+'" y1="0" x2="'+LW+'" y2="'+TH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+  s+='<line x1="0" y1="'+HH+'" x2="'+CW+'" y2="'+HH+'" stroke="'+colBdr+'" stroke-width="1.5"/>';
+
   var labelOverlay='';
   personsInUse.forEach(function(person,ri){
     var y=HH+ri*RH;
-    s+='<line x1="0" y1="'+(y+RH)+'" x2="'+TW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
+    s+='<line x1="0" y1="'+(y+RH)+'" x2="'+CW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
     labelOverlay+='<rect x="0" y="'+y+'" width="'+LW+'" height="'+RH+'" fill="'+colSur+'"/>';
     labelOverlay+='<text x="8" y="'+(y+RH/2+4)+'" font-size="12" font-weight="500" fill="'+colTx+'" clip-path="url(#lclip)">'+person+'</text>';
     labelOverlay+='<line x1="'+LW+'" y1="'+y+'" x2="'+LW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="1"/>';
     var phases=dated.filter(function(ph){return ph.odgovorna_oseba===person;});
     phases.forEach(function(ph,pi){
       var bc=PC[pi%PC.length];
-      var x1=LW+xPct(ph.datum_zacetka)*CW, x2=LW+xPct(ph.datum_konca)*CW;
+      var x1=xPct(ph.datum_zacetka)*CW, x2=xPct(ph.datum_konca)*CW;
       var bw=Math.max(x2-x1,4), by=y+BP;
       var proj=allProjects.find(function(p){return String(p.st)===String(ph.projekt_st);});
       var pname=proj?proj.st+' - '+proj.projekt:ph.projekt_st;
@@ -799,8 +799,7 @@ function renderGantt() {
       s+='<rect x="'+x1+'" y="'+by+'" width="'+bw+'" height="'+BH+'" rx="4" fill="transparent" data-pid="'+ph.projekt_st+'" class="gantt-click" style="cursor:pointer"><title>'+tip+'</title></rect>';
     });
   });
-  s+=labelOverlay;
-  s+='<defs><clipPath id="lclip"><rect x="0" y="0" width="'+(LW-4)+'" height="'+TH+'"/></clipPath></defs></svg>';
+
   var leg=Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></span>'+n+'</span>';
   }).join('');
@@ -818,6 +817,10 @@ function renderGantt() {
     el.addEventListener('mouseleave',function(){isDown=false;el.style.cursor='grab';});
     el.addEventListener('mouseup',function(){isDown=false;el.style.cursor='grab';});
     el.addEventListener('mousemove',function(e){if(!isDown)return;moved=true;e.preventDefault();el.scrollLeft=sL-(e.pageX-el.offsetLeft-sX);});
+    el.addEventListener('scroll',function(){
+      var labelsEl=document.getElementById('gantt-labels');
+      if(labelsEl) labelsEl.scrollTop=el.scrollTop;
+    });
     el.addEventListener('click',function(e){
       if(moved)return;
       var t=e.target;
