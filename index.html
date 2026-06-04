@@ -1033,14 +1033,16 @@ function renderFinance() {
 }
 
 function switchTab(tab){
-  ['projects','engineers','gantt'].forEach(t=>{
-    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+  ['projects','engineers','gantt','finance'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display=t===tab?'':'none';
   });
   document.querySelectorAll('.tab').forEach((b,i)=>{
-    b.classList.toggle('active',['projects','engineers','gantt'][i]===tab);
+    b.classList.toggle('active',['projects','engineers','gantt','finance'][i]===tab);
   });
   if(tab==='engineers')renderEngineers();
   if(tab==='gantt')renderGantt();
+  if(tab==='finance'){setFinanceSort(financeSort);renderFinance();}
 }
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
