@@ -1092,6 +1092,39 @@ function goToProject(st) {
   }, 80);
 }
 
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function openCfg(){
+  document.getElementById('cfg-url').value = SCRIPT_URL || '';
+  document.getElementById('cfg-modal').classList.add('open');
+}
+function closeCfg(){
+  document.getElementById('cfg-modal').classList.remove('open');
+}
+function saveCfg(){
+  var url = document.getElementById('cfg-url').value.trim();
+  if(!url) return;
+  SCRIPT_URL = url;
+  localStorage.setItem('geo_script_url', url);
+  document.getElementById('cfg-modal').classList.remove('open');
+  document.getElementById('cfg-banner').style.display = 'none';
+  loadAll();
+}
+document.getElementById('cfg-modal').addEventListener('click', function(e){
+  if(e.target === document.getElementById('cfg-modal')) closeCfg();
+});
+document.getElementById('phase-modal').addEventListener('click', function(e){
+  if(e.target === document.getElementById('phase-modal')) closePhaseModal();
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if(SCRIPT_URL){
+  document.getElementById('cfg-banner').style.display = 'none';
+  loadAll();
+} else {
+  updateMetrics();
+  renderProjects();
+}
+
 </script>
 </body>
 </html>
