@@ -260,7 +260,7 @@ function jsonp(url, params) {
       resolve(data);
     };
     const allParams = Object.assign({}, params, { callback: cbName });
-    const qs = Object.entries(allParams).map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+    const qs = Object.entries(allParams).map(function(kv){ return kv[0] + '=' + encodeURIComponent(kv[1]); }).join('&');
     const s = document.createElement('script');
     s.id = 'jsonp-script-' + cbName;
     s.src = url + '?' + qs;
@@ -348,9 +348,10 @@ function apiPost(action, dataObj) {
       resolve(data);
     };
     // Use JSONP for writes too (GET with all params encoded)
-    const qs = Object.entries(allParams).map(([k,v]) =>
-      k + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v)
-    ).join('&');
+    const qs = Object.entries(allParams).map(function(kv){
+      var k=kv[0], v=kv[1];
+      return k + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v);
+    }).join('&');
     const s = document.createElement('script');
     s.src = SCRIPT_URL + '?' + qs;
     s.onerror = () => { delete window[cbName]; setSyncStatus('ok'); resolve(null); };
@@ -362,11 +363,12 @@ function apiPost(action, dataObj) {
 // ─── LOAD ─────────────────────────────────────────────────────────────────────
 async function loadAll() {
   if (!SCRIPT_URL) { updateMetrics(); renderProjects(); return; }
-  const [rp, rf, rv] = await Promise.all([
+  var _results = await Promise.all([
     api('getProjects'),
     api('getPhases'),
     api('getPersons'),
   ]);
+  var rp = _results[0], rf = _results[1], rv = _results[2];
   if ((rp&&rp.projects)) allProjects = rp.projects;
   if ((rf&&rf.phases))   allPhases   = rf.phases;
   if ((rv&&rv.persons))  allPersons  = rv.persons;
