@@ -293,6 +293,7 @@ function ini(n){return (n||'').split(' ').map(x=>x[0]).join('').slice(0,2).toUpp
 function fmt(s){if(!s)return'—';const d=new Date(s);return isNaN(d)?s:d.toLocaleDateString('sl-SI',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function days(a,b){return Math.max(0,Math.round((new Date(b)-new Date(a))/86400000))}
 function phColor(i){return COLORS[i % COLORS.length]}
+function phColorByName(name){return {c:phaseColorByName(name),bg:phaseColorByName(name)+'22',tc:phaseColorByName(name)}}
 function phStatus(ph){
   const now=new Date(),s=new Date(ph.datum_zacetka),e=new Date(ph.datum_konca);
   if((ph.napredek||0)>=100)return'done';
@@ -589,6 +590,38 @@ async function deletePhase(rowNum, st) {
 }
 
 // ─── PHASE MODAL ──────────────────────────────────────────────────────────────
+function addRespChip(name) {
+  if(!name || name === '__new__') return;
+  var container = document.getElementById('pf-resp-chips');
+  if(!container) return;
+  // Check if already added
+  var existing = container.querySelectorAll('.resp-chip');
+  for(var i=0; i<existing.length; i++){
+    if(existing[i].dataset.name === name) return;
+  }
+  var chip = document.createElement('div');
+  chip.className = 'resp-chip';
+  chip.dataset.name = name;
+  chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--g-bg);color:var(--g-tc);padding:4px 8px 4px 10px;border-radius:20px;font-size:12px;font-weight:500';
+  chip.innerHTML = name + '<button type="button" onclick="this.parentNode.remove()" style="background:none;border:none;cursor:pointer;color:var(--g-tc);font-size:14px;line-height:1;padding:0 0 0 2px">&times;</button>';
+  container.appendChild(chip);
+}
+
+function addRespPerson() {
+  var sel = document.getElementById('pf-resp-add');
+  var manual = document.getElementById('pf-resp-manual');
+  var name = sel ? sel.value : '';
+  if(name === '__new__') {
+    name = manual ? manual.value.trim() : '';
+    if(manual) manual.value = '';
+    if(manual) manual.style.display = 'none';
+    if(sel) sel.value = '';
+  } else {
+    if(sel) sel.value = '';
+  }
+  if(name) addRespChip(name);
+}
+
 function openPhaseModal(projektSt, editRowNum) {
   const ph = editRowNum ? allPhases.find(p=>p._rowNum===editRowNum) : null;
   // Use dedicated persons list; fall back to collecting from projects if empty
@@ -598,7 +631,7 @@ function openPhaseModal(projektSt, editRowNum) {
         ...allProjects.map(p=>p.vodjaProjekta),
         ...allProjects.map(p=>p.vodjaTerma),
       ].filter(Boolean))].sort();
-  const personOpts = basePersons.map(p=>`<option value="${p}"${(ph&&ph.odgovorna_oseba)===p?' selected':''}>${p}</option>`).join('');
+  const personOpts = basePersons.map(p=>`<option value="${p}">${p}</option>`).join('');
 
   document.getElementById('phase-modal-content').innerHTML = `
     <div class="modal-title"><i class="ti ti-${editRowNum?'edit':'stack-push'}"></i>${editRowNum?'Uredi fazo':'Dodaj fazo'}</div>
@@ -607,14 +640,18 @@ function openPhaseModal(projektSt, editRowNum) {
       <input id="pf-name" type="text" value="${(ph&&ph.naziv_faze)||''}" placeholder="npr. Priprava, Terensko delo, Elaborat…">
     </div>
     <div class="fg">
-      <label>Odgovorna oseba</label>
-      <select id="pf-resp">
-        <option value="">— izberite —</option>
-        ${personOpts}
-        <option value="__new__">+ Vnesite ročno…</option>
-      </select>
+      <label>Odgovorna oseba (izberite enega ali več)</label>
+      <div id="pf-resp-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <select id="pf-resp-add" style="flex:1">
+          <option value="">+ Dodaj osebo…</option>
+          ${personOpts}
+          <option value="__new__">+ Vnesite ročno…</option>
+        </select>
+        <button type="button" class="btn btn-s" onclick="addRespPerson()" style="padding:6px 10px;font-size:12px">Dodaj</button>
+      </div>
       <input id="pf-resp-manual" type="text" placeholder="Ime in priimek"
-        style="display:none;margin-top:6px" value="${(ph&&ph.odgovorna_oseba)||''}">
+        style="display:none;margin-top:6px">
     </div>
     <div class="fg-row">
       <div class="fg"><label>Datum začetka</label><input id="pf-start" type="date" value="${(ph&&ph.datum_zacetka)||''}"></div>
@@ -636,9 +673,12 @@ function openPhaseModal(projektSt, editRowNum) {
       </button>
     </div>`;
 
-  document.getElementById('pf-resp').addEventListener('change', function(){
+  document.getElementById('pf-resp-add').addEventListener('change', function(){
     document.getElementById('pf-resp-manual').style.display = this.value==='__new__'?'block':'none';
   });
+  // Pre-populate chips with existing persons
+  var existingPersons = (ph && ph.odgovorna_oseba) ? ph.odgovorna_oseba.split(', ').filter(Boolean) : [];
+  existingPersons.forEach(function(p){ addRespChip(p); });
   function updDur(){
     const s=(document.getElementById('pf-start') ? document.getElementById('pf-start').value : ''),e=(document.getElementById('pf-end') ? document.getElementById('pf-end').value : '');
     const prev=document.getElementById('dur-preview');
@@ -656,8 +696,13 @@ function closePhaseModal(){document.getElementById('phase-modal').classList.remo
 
 async function savePhase(projektSt, editRowNum) {
   const name  = document.getElementById('pf-name').value.trim();
-  const respSel = document.getElementById('pf-resp').value;
-  const resp  = respSel==='__new__' ? document.getElementById('pf-resp-manual').value.trim() : respSel;
+  // Collect all selected persons from chips
+  var chips = document.querySelectorAll('#pf-resp-chips .resp-chip');
+  var respArr = Array.from(chips).map(function(c){ return c.dataset.name; }).filter(Boolean);
+  // Also check if manual input has value
+  var manualVal = (document.getElementById('pf-resp-manual') ? document.getElementById('pf-resp-manual').value.trim() : '');
+  if(manualVal && respArr.indexOf(manualVal) === -1) respArr.push(manualVal);
+  const resp = respArr.join(', ');
   const start = document.getElementById('pf-start').value;
   const end   = document.getElementById('pf-end').value;
   const notes = (document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : '')||'';
@@ -713,8 +758,12 @@ function renderEngineers() {
         ...allPhases.map(p=>p.odgovorna_oseba),
       ].filter(Boolean))].sort();
   document.getElementById('eng-grid').innerHTML = persons.map((name,i) => {
-    const activeP = allPhases.filter(ph=>ph.odgovorna_oseba===name&&phStatus(ph)==='active');
-    const projIds = [...new Set(allPhases.filter(ph=>ph.odgovorna_oseba===name).map(ph=>ph.projekt_st))];
+    const activeP = allPhases.filter(function(ph){
+      return ph.odgovorna_oseba && ph.odgovorna_oseba.split(', ').indexOf(name)!==-1 && phStatus(ph)==='active';
+    });
+    const projIds = [...new Set(allPhases.filter(function(ph){
+      return ph.odgovorna_oseba && ph.odgovorna_oseba.split(', ').indexOf(name)!==-1;
+    }).map(ph=>ph.projekt_st))];
     const load = Math.min(activeP.length*30, 100);
     const lc = load>=80?'#E24B4A':load>=50?'#EF9F27':'#1D9E75';
     return `<div class="ecard">
@@ -730,6 +779,28 @@ function renderEngineers() {
 }
 
 // ─── GANTT ────────────────────────────────────────────────────────────────────
+// Build stable color map for phase names
+var _phaseColorMap = {};
+var _phaseColorIdx = 0;
+var PC_COLORS = ['#378ADD','#1D9E75','#7F77DD','#D85A30','#D4537E','#639922','#BA7517','#185FA5'];
+
+function phaseColorByName(name) {
+  if(!name) return PC_COLORS[0];
+  if(!_phaseColorMap[name]) {
+    _phaseColorMap[name] = PC_COLORS[_phaseColorIdx % PC_COLORS.length];
+    _phaseColorIdx++;
+  }
+  return _phaseColorMap[name];
+}
+
+function resetPhaseColors() {
+  _phaseColorMap = {};
+  _phaseColorIdx = 0;
+  // Pre-assign colors to all known phase names in consistent order
+  var names = Array.from(new Set(allPhases.map(function(ph){return ph.naziv_faze;}).filter(Boolean))).sort();
+  names.forEach(function(n){ phaseColorByName(n); });
+}
+
 function setGanttScale(scale) {
   ganttScale = scale;
   ['month','quarter','year'].forEach(function(s) {
@@ -742,13 +813,22 @@ function setGanttScale(scale) {
 }
 
 function renderGantt() {
+  resetPhaseColors();
   var container = document.getElementById('gantt-container');
   var dated = allPhases.filter(function(ph){return ph.datum_zacetka&&ph.datum_konca&&ph.odgovorna_oseba;});
   if (!dated.length) { container.innerHTML='<div class="empty"><i class="ti ti-chart-gantt"></i>Ni faz z datumi.</div>'; return; }
 
   // Persons list
   var knownPersons = allPersons.length ? allPersons : [];
-  var phasePersons = Array.from(new Set(dated.map(function(ph){return ph.odgovorna_oseba;}).filter(Boolean)));
+  var phasePersons = [];
+  dated.forEach(function(ph){
+    if(ph.odgovorna_oseba){
+      ph.odgovorna_oseba.split(', ').forEach(function(p){
+        p = p.trim();
+        if(p && phasePersons.indexOf(p)===-1) phasePersons.push(p);
+      });
+    }
+  });
   var extraPersons = phasePersons.filter(function(p){ return knownPersons.indexOf(p)===-1; });
   var personsInUse = knownPersons.concat(extraPersons).filter(function(p){
     return dated.some(function(ph){return ph.odgovorna_oseba===p;});
@@ -851,9 +931,11 @@ function renderGantt() {
   personsInUse.forEach(function(person,ri){
     var y = HH + ri*RH;
     cs += '<line x1="0" y1="'+(y+RH)+'" x2="'+CW+'" y2="'+(y+RH)+'" stroke="'+colBdr+'" stroke-width="0.5"/>';
-    var phases = dated.filter(function(ph){return ph.odgovorna_oseba===person;});
+    var phases = dated.filter(function(ph){
+      return ph.odgovorna_oseba && ph.odgovorna_oseba.split(', ').map(function(p){return p.trim();}).indexOf(person)!==-1;
+    });
     phases.forEach(function(ph,pi){
-      var bc = PC[pi%PC.length];
+      var bc = phaseColorByName(ph.naziv_faze);
       var x1 = xPct(ph.datum_zacetka)*CW;
       var x2 = xPct(ph.datum_konca)*CW;
       var bw = Math.max(x2-x1,4), by = y+BP;
@@ -871,8 +953,8 @@ function renderGantt() {
   cs += '</svg>';
 
   // Legend
-  var leg = Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n,i){
-    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></span>'+n+'</span>';
+  var leg = Array.from(new Set(dated.map(function(ph){return ph.naziv_faze;}))).slice(0,8).map(function(n){
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:'+colTx+'"><span style="width:10px;height:10px;border-radius:2px;background:'+phaseColorByName(n)+';display:inline-block"></span>'+n+'</span>';
   }).join('');
 
   container.innerHTML =
